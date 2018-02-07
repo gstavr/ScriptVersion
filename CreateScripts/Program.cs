@@ -6,6 +6,7 @@ namespace CreateScripts
 {
     class Program
     {
+        //! Static Variables
         static StringBuilder schemaFile = new StringBuilder();
         static StringBuilder coreFile = new StringBuilder();
         static StringBuilder customFile = new StringBuilder();
