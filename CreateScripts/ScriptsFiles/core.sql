@@ -11,46 +11,45 @@ SET TRANSACTION ISOLATION LEVEL SERIALIZABLE
 GO
 BEGIN TRANSACTION
 -- Pointer used for text / image updates. This might not be needed, but is declared here just in case
-IF NOT EXISTS (select 1 from [X_Request]  where [ID] = -10)
+IF NOT EXISTS (select 1 from [SS_ApplicationTypes]  where [ID] = 29)
 BEGIN
-INSERT INTO [dbo].[X_Request] ([ID], [UIControl], [Entity], [RequestStyle], [Params], [Edition], [Descr], [CardNameFieldCD]) VALUES (-10, N'ucResourceApplication', NULL, N'UnBound', N'ResourceTypeID=17', 1, N'lbResourceApplication', NULL)
+	INSERT INTO [dbo].[SS_ApplicationTypes] ([ID], [Descr], [ApprovalWorkFlowID], [EmailSubjectTemplateID], [EmailBodyTemplateID], [SenderEmailAccountID], [ApplicationCardUIViewID], [SendRegularApprovalEmail], [SendAutoApprovalEmail], [SendCompletionEmail], [LockTypeId], [LockDays], [ActivateApplicationTypes], [AppManualForwardToHR], [EmailEmpOnModByOther], [EmailEmpOnModByOtherSubjTemplateID], [EmailEmpOnModByOtherBodyTemplateID], [CompletionEmailSubjTemplateID], [CompletionEmailBodyTemplateID], [ApproveNotNeedSubjTemplateID], [ApproveNotNeedBodyTemplateID], [AutoApproveSubjTemplateID], [AutoApproveBodyTemplateID], [SendApproveNotNeededEmail], [Hidden], [SendEmailToApproverOnCompletion], [HasAttachments], [ApplicationMessageLabel], [MaxApprovedAppsAnnually], [BlockSync], [UseApplicationForCancel]) VALUES (29, N'Αίτηση Οικογενειακής Κατάστασης', 1, 1, 2, 1, 10022, 1, NULL, NULL, -1, NULL, 1, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 1, NULL, NULL, NULL, NULL)
 END
 GO
-IF NOT EXISTS (select 1 from [X_Request]  where [ID] = -1)
+IF NOT EXISTS (select 1 from [X_Request]  where [ID] = 100378)
 BEGIN
-INSERT INTO [dbo].[X_Request] ([ID], [UIControl], [Entity], [RequestStyle], [Params], [Edition], [Descr], [CardNameFieldCD]) VALUES (-1, N'ucSSApplication', N'SS_Applications', N'UnBound', N'atype=1&ltype=0&reqMain=1&atgt=1', 1, N'lbApplicationForVacation1', N'SS_Applications.ID')
+	INSERT INTO [dbo].[X_Request] ([ID], [UIControl], [Entity], [RequestStyle], [Params], [Edition], [Descr], [CardNameFieldCD]) VALUES (100378, N'ucManageAdditionalRightsPerNode', NULL, N'UnBound', N'', 1, N'lbManageAdditionalRightsPerNode', NULL)
 END
 GO
-IF NOT EXISTS (select 1 from [X_Request]  where [ID] = 10000055)
+IF NOT EXISTS (select 1 from [X_UIControls]  where [ID] = 155)
 BEGIN
-INSERT INTO [dbo].[X_Request] ([ID], [UIControl], [Entity], [RequestStyle], [Params], [Edition], [Descr], [CardNameFieldCD]) VALUES (10000055, N'ucInfoPage', NULL, N'UnBound', N'id=1', 1, N'infopage', NULL)
+	INSERT INTO [dbo].[X_UIControls] ([ID], [Cd], [Descr]) VALUES (155, N'ucManageAdditionalRightsPerNode', N'ManageAdditionalRightsPerNode')
 END
 GO
-IF NOT EXISTS (select 1 from [X_Request]  where [ID] = 10000102)
+IF NOT EXISTS (select 1 from [X_UIControl_Settings]  where [ControlID] = 24 AND [varKey] = 'LoanAppCommentsRequired' )
 BEGIN
-INSERT INTO [dbo].[X_Request] ([ID], [UIControl], [Entity], [RequestStyle], [Params], [Edition], [Descr], [CardNameFieldCD]) VALUES (10000102, NULL, NULL, N'DBCommand', N'proc=VX_QNR_ChildInfoAAA&mode=ui&Employee=##CurrentContactID##&Chld1Nm=null&Chld1Brt=null&Chld1Gendr=null&Chld2Nm=null&Chld2Brt=null&Chld2Gendr=null&Chld3Nm=null&Chld3Brt=null&Chld3Gendr=null&Chld4Nm=null&Chld4Brt=null&Chld4Gendr=null', 1, N'lbQNR_ChildInfoAAA', NULL)
+	INSERT INTO [dbo].[X_UIControl_Settings] ([ID], [ControlID], [varKey], [varValue]) VALUES (97, 24, N'LoanAppCommentsRequired', N'1')
 END
 GO
-IF NOT EXISTS (select 1 from [X_TablesForDynamicTranslation]  where [ID] = 77)
+IF NOT EXISTS (select 1 from [X_UIControl_Settings]  where [ControlID] = 118 AND [varKey] = 'ShiftPlanShowPrintComments' )
 BEGIN
-INSERT INTO [dbo].[X_TablesForDynamicTranslation] ([ID], [TABLE_NAME], [Descr], [ColumnName]) VALUES (77, N'SS_HRM_PR_Projects', N'Projects', NULL)
+	INSERT INTO [dbo].[X_UIControl_Settings] ([ID], [ControlID], [varKey], [varValue]) VALUES (98, 118, N'ShiftPlanShowPrintComments', N'1')
 END
 GO
-IF NOT EXISTS (select 1 from [X_UIControls]  where [ID] = 123)
+IF NOT EXISTS (select 1 from [X_UIControl_Settings]  where [ControlID] = 118 AND [varKey] = 'ShiftPlanPrintComments' )
 BEGIN
-INSERT INTO [dbo].[X_UIControls] ([ID], [Cd], [Descr]) VALUES (123, N'ucSampleControl', N'SampleControl')
+	INSERT INTO [dbo].[X_UIControl_Settings] ([ID], [ControlID], [varKey], [varValue]) VALUES (99, 118, N'ShiftPlanPrintComments', N'<p><strong>1st line</strong></p><hr /><p><em>2nd line</em></p><hr /><p>3 line!</p>')
 END
 GO
-IF NOT EXISTS (select 1 from [X_UIControls]  where [ID] = 151)
+IF NOT EXISTS (select 1 from [X_UIControl_Settings]  where [ControlID] = 24 AND [varKey] = 'FamilyStatusShowEmployeeDependent' )
 BEGIN
-INSERT INTO [dbo].[X_UIControls] ([ID], [Cd], [Descr]) VALUES (151, N'ucTrainingSettings', N'TrainingSettings')
+	INSERT INTO [dbo].[X_UIControl_Settings] ([ID], [ControlID], [varKey], [varValue]) VALUES (100, 24, N'FamilyStatusShowEmployeeDependent', N'0')
 END
 GO
-IF NOT EXISTS (select 1 from [X_UIControls]  where [ID] = 152)
+IF NOT EXISTS (select 1 from [X_UIControl_Settings]  where [ControlID] = 24 AND [varKey] = 'FamilyStatusShowIncreasesTaxDeductible' )
 BEGIN
-INSERT INTO [dbo].[X_UIControls] ([ID], [Cd], [Descr]) VALUES (152, N'ucSalaryReport', N'SalaryReport')
+	INSERT INTO [dbo].[X_UIControl_Settings] ([ID], [ControlID], [varKey], [varValue]) VALUES (101, 24, N'FamilyStatusShowIncreasesTaxDeductible', N'1')
 END
 GO
-
 COMMIT TRANSACTION
 GO

@@ -106,6 +106,7 @@ namespace CreateScripts
 
             string wanted_path = Path.GetDirectoryName(Path.GetDirectoryName(Directory.GetCurrentDirectory()));
             string exportFile = Directory.GetCurrentDirectory() + "\\ScriptsFiles\\version.sql";
+            Console.WriteLine($"{exportFile} Created" );
             File.WriteAllText(exportFile, finalScript.ToString(), Encoding.UTF8);
         }
 
@@ -244,9 +245,20 @@ namespace CreateScripts
                             int idCommaIndex = s.IndexOf(',', startIdIndex);
                             int lengthID = idCommaIndex - startIdIndex;
                             string idValue =  s.Substring(startIdIndex, lengthID);
-                            insertStatement.AppendLine($"IF NOT EXISTS (select 1 from {tableName} where [ID] = {idValue})");
+
+                            int varControlIDIndex = s.IndexOf(',', idCommaIndex + 1);
+                            string ControlID = s.Substring(idCommaIndex + 1, varControlIDIndex - idCommaIndex - 1);
+
+                            int varKeyIndexStart = s.IndexOf("'");
+                            int varKeyIndexEnd = s.IndexOf("'" , varKeyIndexStart + 1);
+                            string varkey = s.Substring(varKeyIndexStart + 1, varKeyIndexEnd - varKeyIndexStart - 1);
+
+                            if (!tableName.Contains("X_UIControl_Settings"))
+                                insertStatement.AppendLine($"IF NOT EXISTS (select 1 from {tableName} where [ID] = {idValue})");
+                            else
+                                insertStatement.AppendLine($"IF NOT EXISTS (select 1 from {tableName} where [ControlID] ={ControlID} AND [varKey] = '{varkey}' )");
                             insertStatement.AppendLine("BEGIN");
-                            insertStatement.AppendLine(s);
+                            insertStatement.AppendLine("\t"+s);
                             insertStatement.AppendLine("END");
                             insertStatement.AppendLine("GO");
                             s = insertStatement.ToString();
