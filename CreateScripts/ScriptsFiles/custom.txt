@@ -1,1183 +1,678 @@
-SET NUMERIC_ROUNDABORT OFF
-GO
-SET ANSI_PADDING, ANSI_WARNINGS, CONCAT_NULL_YIELDS_NULL, ARITHABORT, QUOTED_IDENTIFIER, ANSI_NULLS ON
-GO
-IF EXISTS (SELECT * FROM tempdb..sysobjects WHERE id=OBJECT_ID('tempdb..#tmpErrors')) DROP TABLE #tmpErrors
-GO
-CREATE TABLE #tmpErrors (Error int)
-GO
-SET XACT_ABORT ON
-GO
-SET TRANSACTION ISOLATION LEVEL SERIALIZABLE
-GO
-BEGIN TRANSACTION
-GO
-PRINT N'Altering [dbo].[SS_ADEIES_TYPE]'
-GO
-IF COL_LENGTH(N'[dbo].[SS_ADEIES_TYPE]', N'ORDER_NUM') IS NULL
-ALTER TABLE [dbo].[SS_ADEIES_TYPE] ADD[ORDER_NUM] [int] NULL
-IF COL_LENGTH(N'[dbo].[SS_ADEIES_TYPE]', N'USE_HOURS') IS NULL
-ALTER TABLE [dbo].[SS_ADEIES_TYPE] ADD[USE_HOURS] [int] NULL
-GO
-IF @@ERROR<>0 AND @@TRANCOUNT>0 ROLLBACK TRANSACTION
-GO
-IF @@TRANCOUNT=0 BEGIN INSERT INTO #tmpErrors (Error) SELECT 1 BEGIN TRANSACTION END
-GO
-IF (COL_LENGTH(N'[dbo].[SS_ADEIES_TYPE]', N'ExcludeDaysLeftValidation ') IS NOT NULL) AND (COL_LENGTH(N'[dbo].[SS_ADEIES_TYPE]', N'ExcludeDaysLeftValidation') IS NULL)
-EXEC sp_rename N'[dbo].[SS_ADEIES_TYPE].[ExcludeDaysLeftValidation ]', N'ExcludeDaysLeftValidation', 'COLUMN'
-GO
-IF @@ERROR<>0 AND @@TRANCOUNT>0 ROLLBACK TRANSACTION
-GO
-IF @@TRANCOUNT=0 BEGIN INSERT INTO #tmpErrors (Error) SELECT 1 BEGIN TRANSACTION END
-GO
-PRINT N'Altering [dbo].[SS_ApprovalWorkflow_Approvers]'
-GO
-IF COL_LENGTH(N'[dbo].[SS_ApprovalWorkflow_Approvers]', N'DepartmentGetDeputyManager') IS NULL
-ALTER TABLE [dbo].[SS_ApprovalWorkflow_Approvers] ADD[DepartmentGetDeputyManager] [int] NULL
-IF COL_LENGTH(N'[dbo].[SS_ApprovalWorkflow_Approvers]', N'UseEmployeeDepartmentForDeputyManager') IS NULL
-ALTER TABLE [dbo].[SS_ApprovalWorkflow_Approvers] ADD[UseEmployeeDepartmentForDeputyManager] [int] NULL
-GO
-IF @@ERROR<>0 AND @@TRANCOUNT>0 ROLLBACK TRANSACTION
-GO
-IF @@TRANCOUNT=0 BEGIN INSERT INTO #tmpErrors (Error) SELECT 1 BEGIN TRANSACTION END
-GO
-PRINT N'Altering [dbo].[SS_getWorkflowApproverEntries]'
-GO
-ALTER FUNCTION [dbo].[SS_getWorkflowApproverEntries] (@ApplicationID int, @ApplicationTypeID int, @WorkflowID int, @EmployeeID int, @DepartmentID int
-	, @TimeOffTypeID int -- Added 6/4/2017
-)
-RETURNS @RetTbl TABLE (AppWorkflowApproverID int
-    , OrderNum int
-    , ApproverID int
-    , ReEvaluateApprover int
-    , BlockEREdit int
-    , BlockEROverDraft int
-    , CompletingValidations int
-    , Comments nvarchar(500)
-    , AllowAddApprover int  -- Added 27/9/2016 (102361)
-	, SourceWorkflowID int  -- Added 6/6/2017
-)
-AS
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbIsEmployeeDependent' AND [Language] = 1) 
 BEGIN
-    --
-    -- Valid Cases:
-    --		Specific Application (@ApplicationID) => Existing Application Approver entries
-    --		Generic Workflow (@WorkflowID) => Generic Workflow entries
-    --      Instance of Workflow for Employee (@WorkflowID, @EmployeeID) => Calculated Application Approver entries
-    --      Workflow of a type for Employee (@ApplicationTypeID, @EmployeeID) => Calculated Application Approver entries
-    --      Workflow of a type for Employee for specific department (@ApplicationTypeID, @EmployeeID, @DepartmentID) => Calculated Application Approver entries
-    --
-    IF (@WorkflowID is null AND @ApplicationID is null AND @ApplicationTypeID is null) OR (@WorkflowID is null AND (@ApplicationID is null OR @ApplicationID=-1) AND (@ApplicationTypeID is null OR @EmployeeID is null))
-    BEGIN
-        RETURN;
-    END;
-
-    IF @WorkflowID is not null AND @EmployeeID is null BEGIN
-        INSERT INTO @RetTbl
-        SELECT null AS AppWorkflowApproverID
-            , a.OrderNum 
-            , null AS ApproverID
-            , 1 AS ReEvaluateApprover
-            , a.BlockEREdit
-            , a.BlockEROverDraft
-            , a.CompletingValidations
-            , f.FriendlyType
-            , a.AllowAddApprover -- Added 27/9/2016 (102361)
-			, @WorkflowID -- Added 6/6/2017
-        FROM SS_ApprovalWorkflow_Approvers a
-        JOIN SS_ApplicationApprover_FriendlyTypes f on a.ID = f.ID
-        WHERE a.WorkflowID = @WorkflowID;
-        RETURN;
-    END;
-    IF @ApplicationID is not null AND @ApplicationID <> -1 BEGIN
-        INSERT INTO @RetTbl
-        SELECT ID As AppWorkflowApproverID
-            , OrderNum
-            , ApproverID
-            , ReEvaluateApprover
-            , BlockEREdit
-            , BlockEROverDraft
-            , CompletingValidations
-            , 'Actual Approver'
-            , AllowAddApprover  -- Added 27/9/2016 (102361)
-			, SourceWorkflowID  -- Added 6/6/2017
-        FROM SS_Application_WorkflowApprovers 
-        WHERE ApplicationID = @ApplicationID;
-        RETURN;
-    END;
-    DECLARE @OrderNum AS int
-		, @GetManager AS int
-		, @GetManagersManager AS int
-		, @ContactID AS int
-		, @CompanyID AS int
-		, @ManagerLevelAboveEmployee AS int
-		, @ApproverDepartmentID AS int
-		, @DepartmentGetManager AS int
-		, @DepartmentGetPositionID AS int
-		, @PositionCompanyID AS int
-		, @ReEvaluateApprover AS int
-		, @IsAutoApprove AS int
-		, @BlockEREdit AS int
-		, @BlockEROverDraft AS int
-		, @CompletingValidations AS int
-		, @SS_Application_WorkFlowApprovers__ID AS int
-		, @AllowAddApprover AS int -- Added 27/9/2016 (102361)
-		, @DepartmentGetDeputyManager AS int -- Added 13/2/2018 (126550)
-		, @UseEmployeeDepartmentForDeputy AS int  -- Added 15/2/2018 (126550)
-		;
-
-    DECLARE @ApproverContactIDs TABLE (ContactID int);
-	DECLARE @RepeatApprover AS int, @AdminContactID AS int, @SourceWorkflowID int;
-    
-	IF @DepartmentID is null SET @DepartmentID=(SELECT TOP 1 dc.DepartmentID FROM AC_Department_Contacts dc WHERE dc.ContactID=@EmployeeID AND getdate() between dc.StartDate and isnull(dc.EndDate,'2049-12-31'));
-
-    -- Added 10/10/2016 (102167)
-    DECLARE @DeptCharID int;
-    IF @DepartmentID is not null SET @DeptCharID=(SELECT DepartmentCharacteristicID FROM AC_Departments WHERE ID=@DepartmentID);
-    -- End Add 10/10/2016
-
-    SET @CompanyID=(SELECT comp.ContactID FROM SS_Employee e JOIN AC_Companies comp on e.ID_CMP=comp.HRMCompanyID WHERE e.ContactID=@EmployeeID);
-
-    -- Repeat Approver:  When the same employee is included more than once as an approver within the same application's worklow, if the approver will be included more than once
-    --
-    SET @RepeatApprover=(SELECT varValue FROM X_Vars WHERE varKey='SSApproverRepeat');
-    IF @RepeatApprover is null SET @RepeatApprover=0;
-    --
-    --
-
-    -- Admin Contact:  The user how will be assigned the approval if the approver cannot be calculated from the workflow logic
-    --     
-    SET @AdminContactID=(SELECT varValue FROM X_Vars WHERE varKey='SSApproverNull');
-    IF @AdminContactID is null SET @AdminContactID=2; 
-    --
-    --
-	   
-    DECLARE cr__SS_getWorkflowApproverEntries CURSOR LOCAL FOR           
-        SELECT @EmployeeID
-            , awa.OrderNum
-            , awa.GetManager
-            , awa.GetManagersManager
-            , awa.ContactID
-            , @CompanyID
-            , awa.ManagerLevelAboveEmployee
-            , awa.DepartmentID AS ApproverDepartmentID
-            , awa.DepartmentGetManager
-            , awa.DepartmentGetPositionID
-            , awa.PositionCompanyID
-            , awa.BlockEREdit
-            , awa.BlockEROverDraft
-            , awa.CompletingValidations
-            , awa.AllowAddApprover  -- Added 27/9/2016 (102361)
-			, aw.ID -- Added 6/6/2017
-			, awa.DepartmentGetDeputyManager -- Added 13/2/2018 (126550)
-			, awa.UseEmployeeDepartmentForDeputyManager -- Added 15/2/2018 (126550)
-		FROM SS_ApplicationTypes appt
-        LEFT JOIN SS_ApplicationType_WorkflowExceptions te ON te.TypeID=appt.ID AND te.DepartmentID=@DepartmentID AND getdate() between isnull(te.Validfrom,'1990-1-1') and isnull(te.ValidTill,'2049-12-31')
-        LEFT JOIN SS_ApplicationType_PerDeptCharacteristicApprovalExceptions te2 ON te2.ApplicationTypeID=appt.ID AND te2.DepartmentCharacteristicID=@DeptCharID AND getdate() between isnull(te2.StartDate, '1990-1-1') and isnull(te2.EndDate,'2049-12-31')  -- Added 10/10/2016 (102167)
-        LEFT JOIN SS_ApplicationType_PerPersonApprovalExceptions te3 ON te3.ApplicationTypeID=appt.ID AND te3.EmployeeContactID=@EmployeeID AND getdate() between isnull(te3.StartDate,'1990-1-1') and isnull(te3.EndDate,'2049-12-31')  -- Added 10/10/2016 (102167)
-        LEFT JOIN SS_ApplicationType_TimeOffExceptions te4 ON te4.ApplicationTypeID=appt.ID and te4.TimeOffTypeID=@TimeOffTypeID AND getdate() between isnull(te4.StartDate,'1990-1-1') and isnull(te4.EndDate,'2049-12-31')  -- Added 6/4/2017
-        INNER JOIN SS_ApprovalWorkflows aw ON isnull(te3.WorkflowID, isnull(te.WorkflowID, isnull(te2.WorkflowID, isnull(te4.WorkflowID,appt.ApprovalWorkflowID))))=aw.ID -- Modified 10/10/2016 (102167), modified 6-4-2017
-        -- Note - Workflow Selection Order:  Employee Exception -> Department Exception -> Department Characteristic Exception -> TimeOff Type -> General Workflow for Type
-        INNER JOIN SS_ApprovalWorkflow_Approvers awa ON awa.WorkFlowID=aw.ID  
-        LEFT JOIN SS_ApplicationAutoSkipApprovals aasa ON aasa.ApplicationTypeID=appt.ID and aasa.EmployeeContactID=@EmployeeID
-        WHERE --@ApplicationID is not null AND
-		appt.ID=@ApplicationTypeID AND aasa.ID is null
-        UNION
-        SELECT @EmployeeID
-            , awa.OrderNum
-            , awa.GetManager
-            , awa.GetManagersManager
-            , awa.ContactID
-            , @CompanyID
-            , awa.ManagerLevelAboveEmployee
-            , awa.DepartmentID AS ApproverDepartmentID
-            , awa.DepartmentGetManager
-            , awa.DepartmentGetPositionID
-            , awa.PositionCompanyID
-            , awa.BlockEREdit
-            , awa.BlockEROverDraft
-            , awa.CompletingValidations
-            , awa.AllowAddApprover -- Added 27/9/2016 (102361)
-			, @WorkflowID -- Added 6/6/2017
-			, awa.DepartmentGetDeputyManager -- Added 13/2/2018 (126550)
-			, awa.UseEmployeeDepartmentForDeputyManager -- Added 15/2/2018 (126550)
-        FROM SS_ApprovalWorkflow_Approvers awa
-        WHERE @ApplicationID is null AND awa.WorkflowID=@WorkflowID
-        ;
-       
-    OPEN cr__SS_getWorkflowApproverEntries;
-    FETCH NEXT FROM cr__SS_getWorkflowApproverEntries INTO @EmployeeID, @OrderNum, @GetManager, @GetManagersManager, @ContactID, @CompanyID, @ManagerLevelAboveEmployee, @ApproverDepartmentID, @DepartmentGetManager, @DepartmentGetPositionID, @PositionCompanyID, @BlockEREdit, @BlockEROverDraft, @CompletingValidations
-        , @AllowAddApprover  -- Added 27/9/2016 (102361)
-		, @SourceWorkflowID  -- Added 6/6/2017
-		, @DepartmentGetDeputyManager -- Added 13/2/2018 (126550)
-		, @UseEmployeeDepartmentForDeputy -- Added 15/2/2018 (126550)
-		;
-       
-    -- Begin Add 27/4/2016 --
-    DECLARE @HigherManagerCase int;
-    SET @HigherManagerCase=0;
-    -- End Add 27/4/2016 --
-       
-    WHILE @@FETCH_STATUS=0 BEGIN
-		IF @ContactID is null BEGIN 
-            IF @GetManager = 1 BEGIN
-                INSERT INTO @ApproverContactIDs
-                    SELECT distinct ManagerContactID 
-                    FROM AC_Department_Contacts dc
-                    CROSS APPLY dbo.fnSS_ContactManagers_Subs(dc.ContactID,dc.DepartmentID,1) cm 
-                    WHERE dc.ContactID=@EmployeeID
-                    AND getdate() between dc.StartDate and isnull(dc.EndDate,'2049-12-31')
-                    AND cm.AA=1;
-            END
-            ELSE BEGIN
-				IF @GetManagersManager=1 BEGIN
-					-- Begin Add 27/4/2016 --
-					SET @HigherManagerCase=1;
-					-- End Add 27/4/2016 --
-					INSERT INTO @ApproverContactIDs
-					SELECT distinct ManagerContactID 
-					FROM AC_Department_Contacts dc
-					CROSS APPLY dbo.fnSS_ContactManagers_Subs(dc.ContactID,dc.DepartmentID,1) cm 
-					WHERE dc.ContactID=@EmployeeID
-					AND getdate() between dc.StartDate and isnull(dc.EndDate,'2049-12-31')
-					AND cm.AA=2;
-				END
-                ELSE BEGIN
-					IF @ManagerLevelAboveEmployee is not null BEGIN
-					-- Begin Add 27/4/2016 --
-					IF @ManagerLevelAboveEmployee>1 BEGIN
-						SET @HigherManagerCase=1;
-					END;
-					-- End Add 27/4/2016 --
-					INSERT INTO @ApproverContactIDs
-					SELECT distinct ManagerContactID 
-					FROM AC_Department_Contacts dc
-					CROSS APPLY dbo.fnSS_ContactManagers_Subs(dc.ContactID,dc.DepartmentID,1) cm 
-					WHERE dc.ContactID=@EmployeeID
-					AND getdate() between dc.StartDate and isnull(dc.EndDate,'2049-12-31')
-					AND cm.AA=@ManagerLevelAboveEmployee;
-				END
-                ELSE BEGIN
-					IF (@ApproverDepartmentID is not NULL AND (@DepartmentGetManager=1 OR @DepartmentGetPositionID is not null OR @DepartmentGetDeputyManager=1)) -- Changed 13/2/2018 (126550)
-						OR (isnull(@DepartmentGetDeputyManager,0)=1 AND isnull(@UseEmployeeDepartmentForDeputy,0)=1) -- Added 13/2/2018 (126550)
-						BEGIN
-							IF @DepartmentGetManager=1 BEGIN
-								INSERT INTO @ApproverContactIDs
-								SELECT distinct dc.ContactID 
-								FROM AC_Department_Contacts dc 
-								WHERE dc.DepartmentID = @ApproverDepartmentID 
-								AND isnull(dc.IsManager,0)=1 
-								AND getdate() between dc.StartDate and isnull(dc.EndDate,'2049-12-31')
-								AND dc.ContactID<>-2;
-                            END
-                            ELSE BEGIN
-								IF @DepartmentGetDeputyManager=1 BEGIN  -- Added 13/2/2018 (126550)
-									INSERT INTO @ApproverContactIDs
-									SELECT distinct dc.ContactID
-									FROM AC_Department_Contacts dc
-									WHERE dc.DepartmentID=case when isnull(@UseEmployeeDepartmentForDeputy,0)=0 then @ApproverDepartmentID else @DepartmentID end  -- Edited 15/2/2018 (126550)
-									AND getdate() between dc.StartDate and isnull(dc.EndDate,'2049-12-31')
-									AND isnull(dc.IsSubstituteManager,0)=1
-									AND dc.ContactID<>-2;
-								END
-								ELSE BEGIN
-									IF @PositionCompanyID is not null BEGIN
-										INSERT INTO @ApproverContactIDs
-										SELECT distinct dc.ContactID 
-										FROM AC_Department_Contacts dc 
-										JOIN SS_POSITION p on dc.PositionID=p.ID_POS 
-										JOIN AC_Companies cmp on p.ID_CMP=cmp.HRMCompanyID 
-										WHERE dc.DepartmentID=@ApproverDepartmentID 
-										AND dc.PositionID=@DepartmentGetPositionID 
-										AND cmp.ContactID=@PositionCompanyID 
-										AND getdate() between dc.StartDate and isnull(dc.EndDate,'2049-12-31')
-										AND dc.ContactID<>-2;
-                                    END
-                                    ELSE BEGIN
-										INSERT INTO @ApproverContactIDs
-                                        SELECT distinct dc.ContactID 
-                                        FROM AC_Department_Contacts dc 
-                                        WHERE dc.DepartmentID=@ApproverDepartmentID 
-                                        AND dc.PositionID=@DepartmentGetPositionID 
-                                        AND getdate() between dc.StartDate and isnull(dc.EndDate,'2049-12-31')
-                                        AND dc.ContactID<>-2;
-                                    END;
-								END;
-                            END;
-                        END
-                        ELSE BEGIN
-                            IF @ApproverDepartmentID is null AND @DepartmentGetPositionID is not null BEGIN
-								INSERT INTO @ApproverContactIDs
-								SELECT distinct ContactID
-								FROM (SELECT row_number() OVER (ORDER BY dt.DepartmentLevel DESC) AS AA, dc.ContactID
-									FROM AC_Department_Contacts dc0 
-									CROSS APPLY dbo.fnSS_DepartmentTree(dc0.DepartmentID) dt
-									JOIN AC_Department_Contacts dc on dt.ID=dc.DepartmentID and getdate() between dc.StartDate and isnull(dc.EndDate,'2049-12-31')
-									WHERE dc0.ContactID=@EmployeeID 
-									AND getdate() between dc0.StartDate and isnull(dc0.EndDate,'2049-12-31')
-									AND dc.PositionID=@DepartmentGetPositionID
-									AND dc.ContactID<>-2) InnerTbl
-								WHERE AA=1;
-							END;
-						END;
-					END;          
-				END;
-			END;
-        END
-        ELSE BEGIN
-			INSERT INTO @ApproverContactIDs(ContactID) VALUES (@ContactID);
-        END;
-    
-        DECLARE @CurrentApprovers As int;
-        IF (SELECT count(ContactID) FROM @ApproverContactIDs)=0 BEGIN
-            -- No Approvers were calculated, should go to the Admin Contact
-            IF (SELECT count(*) FROM @RetTbl WHERE ApproverID=@AdminContactID)=0 BEGIN
-                -- Begin Add 27/4/2016 --
-                IF @HigherManagerCase=1 AND isnull(@DepartmentGetDeputyManager,0)<>1 BEGIN  -- Changed 15/2/2018 (126550)
-                    IF (SELECT count(*) FROM @RetTbl)=0 BEGIN
-						INSERT INTO @ApproverContactIDs(ContactID) VALUES (@AdminContactID);
-                    END;
-                    -- Higher Manager case:  Do not add administrator if there's already at least one approver
-                END
-                -- End Add 27/4/2016 --
-                ELSE BEGIN
-					IF isnull(@DepartmentGetDeputyManager,0)<>1 -- Added 15/2/2018 (126550)
-						INSERT INTO @ApproverContactIDs(ContactID) VALUES (@AdminContactID);
-                END;
-            END;
-        END
-        ELSE BEGIN
-            -- Check if the approvers calculated were already in the list of approvers, if Repeat is not allowed they should not be added
-            DECLARE @ThisContactID int;
-            DECLARE @ExcludeList TABLE (ContactID int);     
-                
-			DECLARE cr__SS_getWorkflowApproverEntries_ExcludeList CURSOR LOCAL FOR SELECT ContactID FROM @ApproverContactIDs;
-            OPEN cr__SS_getWorkflowApproverEntries_ExcludeList;
-            FETCH NEXT FROM cr__SS_getWorkflowApproverEntries_ExcludeList INTO @ThisContactID;
-                
-			WHILE @@FETCH_STATUS=0 BEGIN
-                SET @CurrentApprovers=(SELECT count(*) FROM @RetTbl WHERE ApproverID=@ThisContactID);
-                IF @CurrentApprovers>0 AND @RepeatApprover<>1 BEGIN
-					INSERT INTO @ExcludeList(ContactID) VALUES (@ThisContactID);
-                END;
-                    
-				FETCH NEXT FROM cr__SS_getWorkflowApproverEntries_ExcludeList INTO @ThisContactID;
-            END;
-
-            CLOSE cr__SS_getWorkflowApproverEntries_ExcludeList;
-            DEALLOCATE cr__SS_getWorkflowApproverEntries_ExcludeList;
-            DELETE FROM @ApproverContactIDs WHERE ContactID in (SELECT ContactID FROM @ExcludeList);
-        END;
-
-        IF (SELECT count(ContactID) FROM @ApproverContactIDs) > 0 BEGIN
-            --
-            -- Entries with an Order larger than the minimum order should be marked so the Approver is re-evaluated later
-            --
-            DECLARE @MinimumOrder As int;
-            SET @MinimumOrder=(SELECT min(awa.OrderNum) 
-                FROM SS_ApplicationTypes appt
-                LEFT JOIN SS_ApplicationType_WorkflowExceptions te ON te.TypeID=appt.ID AND te.DepartmentID=@DepartmentID AND getdate() between isnull(te.Validfrom,'1990-1-1') and isnull(te.ValidTill,'2049-12-31')
-                INNER JOIN SS_ApprovalWorkflows aw ON isnull(te.WorkflowID,appt.ApprovalWorkflowID)=aw.ID
-                JOIN SS_ApprovalWorkflow_Approvers awa on awa.WorkFlowID=aw.ID
-                WHERE appt.ID=@ApplicationTypeID); 
-            IF @OrderNum>@MinimumOrder -- AND @ContactID <> @AdminContactID
-            BEGIN
-                SET @ReEvaluateApprover=1;
-            END
-            ELSE BEGIN
-                SET @ReEvaluateApprover=0;
-            END;
-
-            INSERT INTO @RetTbl
-            SELECT null
-                , @OrderNum
-                , ContactID
-                , @ReEvaluateApprover
-                , @BlockEREdit
-                , @BlockEROverDraft
-                , @CompletingValidations
-                , 'Calculated Approvers'
-                , @AllowAddApprover -- Added 27/9/2016 (102361)
-				, @SourceWorkflowID  -- Added 6/6/2017
-            FROM @ApproverContactIDs;
-
-            DELETE FROM @ApproverContactIDs;
-        END;
-        FETCH NEXT FROM cr__SS_getWorkflowApproverEntries INTO @EmployeeID, @OrderNum, @GetManager, @GetManagersManager, @ContactID, @CompanyID, @ManagerLevelAboveEmployee, @ApproverDepartmentID, @DepartmentGetManager, @DepartmentGetPositionID, @PositionCompanyID, @BlockEREdit, @BlockEROverDraft, @CompletingValidations
-            , @AllowAddApprover  -- Added 27/9/2016 (102361)
-			, @SourceWorkflowID  -- Added 6/6/2017
-			, @DepartmentGetDeputyManager -- Added 13/2/2018 (126550)
-			, @UseEmployeeDepartmentForDeputy  -- Added 15/2/2018 (126550)
-		;
-    END;
-
-    CLOSE cr__SS_getWorkflowApproverEntries;
-    DEALLOCATE cr__SS_getWorkflowApproverEntries;
-    RETURN;
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbIsEmployeeDependent', 1, N'Βαρύνει τον εργαζόμενο',2)
 END
 GO
-IF @@ERROR<>0 AND @@TRANCOUNT>0 ROLLBACK TRANSACTION
-GO
-IF @@TRANCOUNT=0 BEGIN INSERT INTO #tmpErrors (Error) SELECT 1 BEGIN TRANSACTION END
-GO
-PRINT N'Altering [dbo].[SS_HRM_ASS_EvaluationCardSettings]'
-GO
-
-ALTER FUNCTION [dbo].[SS_HRM_ASS_EvaluationCardSettings](@ResultDetailID int,@CurUserID int, @AllowAnyManagerAboveForType2 int)
-RETURNS @RetTbl TABLE (AllowView int,AllowEdit int, AllowReset int, AllowCorrect int, Form_Status int,AssessorType_1 int,Form_Assessor1_ID_EMP int, Form_UseAssessor1ForManager int, AssessorType_2 int, Form_Assessor2_ID_EMP int, AssessorType_3 int,Form_Assessor3_ID_EMP int)
-AS
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbIsEmployeeDependent' AND [Language] = 2) 
 BEGIN
-	SET @AllowAnyManagerAboveForType2 = 0;
-
-	--
-	-- Notes:  
-	--		Substituting for a manager is not taken into account (TBD)
-	--		"Direct Manager" is not the "Effective Manager", just if the manager is in the same dept as the employee.
-	--
-
-	DECLARE @AssesseeID int;
-    SET @AssesseeID = (SELECT a.ContactID
-            FROM SS_HRM_ASS_Results_Detail rd 
-            JOIN AC_All_EmpIDS a on rd.Ext_id_emp = a.EMP_ID
-            WHERE rd.ID = @ResultDetailID);
-
-	DECLARE @Assessor1 int;
-	SET @Assessor1 = (SELECT a.ContactID
-            FROM SS_HRM_ASS_Results_Detail rd 
-            JOIN AC_All_EmpIDS a on rd.id_emp_assessor = a.EMP_ID
-            WHERE rd.ID = @ResultDetailID);
-
-    DECLARE @HasHREditorRights int, @HasHREditorPerCompanyRights int;
-    SET @HasHREditorRights = case when 
-            (SELECT count(*)
-            FROM XU_UserRoles ur
-            WHERE ur.UsrId=@CurUserID
-            AND ur.RoleId=1005) > 0 then 1 else 0 end;
-
-	SET @HasHREditorPerCompanyRights = case when 
-            (SELECT count(*)
-            FROM XU_UserRoles ur
-            WHERE ur.UsrId=@CurUserID
-            AND ur.RoleId=1011) > 0 then 1 else 0 end;
-
-    DECLARE @ManagerList TABLE (AA int, ManagerID int);
-    INSERT INTO @ManagerList
-    SELECT AA, ManagerID
-    FROM
-    (
-            SELECT mdl.ManagerLevel AS AA, mdl.RegularManager AS ManagerID 
-            FROM AC_Department_Contacts dc 
-            CROSS APPLY SS_ContactCurrentManagerTreeUp(dc.ContactID,dc.DepartmentID) mdl 
-            WHERE dc.ContactID = @AssesseeID
-            AND getdate() between dc.StartDate and isnull(dc.Enddate, '2049-12-31')
-    ) InnerTbl
-    WHERE (isnull(@AllowAnyManagerAboveForType2,0)=1 OR AA=1);
-
-	DECLARE @AssessorManagerListAll TABLE (AA int, ManagerID int); -- 15/2/2018 (133262)
-	INSERT INTO @AssessorManagerListAll
-	SELECT AA, ManagerID
-    FROM
-    (
-            SELECT mdl.ManagerLevel AS AA, mdl.RegularManager AS ManagerID 
-            FROM AC_Department_Contacts dc 
-            CROSS APPLY SS_ContactCurrentManagerTreeUp(dc.ContactID,dc.DepartmentID) mdl 
-            WHERE dc.ContactID = @Assessor1
-            AND getdate() between dc.StartDate and isnull(dc.Enddate, '2049-12-31')         
-    ) InnerTbl
-
-	DECLARE @EvaluationShowEditBtnForHR int; --DESS-115639
-	SET @EvaluationShowEditBtnForHR= isnull((SELECT varValue 
-											 FROM X_UIControl_Settings s
-											 JOIN X_UIControls c on s.ControlID=c.ID
-											 WHERE c.Cd='ucEvaluationCard' and s.varKey='EvaluationShowEditBtnForHR'),0);
-	
-	DECLARE @AssessmentEditorRole int; 
-	SET @AssessmentEditorRole= 1017;
-
-	DECLARE @HRPerNodeViewEmployee int;
-	SET @HRPerNodeViewEmployee = case when (SELECT count(*) 
-											FROM AC_Department_Contacts dc 
-											JOIN SS_Employee e on e.ContactID = dc.ContactID
-											WHERE getdate() between dc.Startdate and isnull(dc.Enddate, '2049-12-31') and getdate() <= isnull(e.FRDATE, '2049-12-31') 
-											AND dc.ContactID = @AssesseeID 
-											AND dc.DepartmentID in (SELECT ID FROM SS_GetViewableDepartmentListPerNodePerRole (@CurUserID,@AssessmentEditorRole))
-											) > 0 then 1 else 0 end; 
-
-	INSERT INTO @RetTbl
-    SELECT  CASE WHEN  ((@CurUserID = @AssesseeID) OR (@CurUserID <> @Assessor1 AND @CurUserID not in (select ManagerID FROM @AssessorManagerListAll) AND @HasHREditorRights = 0 AND @HRPerNodeViewEmployee = 0)) AND isnull(ia.EnforceFormPrivacyAssessee,0) =1 AND CONVERT(date,getdate()) <= isnull(ia.EnforceFormPrivacyAssesseeTill,'2049-12-31') then 0
-				 WHEN  ((@CurUserID = @AssesseeID) OR (@CurUserID <> @Assessor1 AND @CurUserID not in (select ManagerID FROM @AssessorManagerListAll) AND @HasHREditorRights = 0 AND @HRPerNodeViewEmployee = 0)) AND isnull(ia.EnforceFormPrivacyAssessee,0) =1 AND CONVERT(date,getdate()) > isnull(ia.EnforceFormPrivacyAssesseeTill,'2049-12-31') AND isnull(rd.[Status],0) <> 3 then 0
-			else 1 end AS AllowView
-	,case
-
-            when @HasHREditorRights=1  then 1
-			when @HRPerNodeViewEmployee = 1  AND @CurUserID <> @AssesseeID then 1
-            when rd.[Status]=3 then -3 --'You cannot Edit because the Form is complete' 
-            when rd.[Status]=1 and isnull(ia.AssessorType_1,1)=1 and @CurUserID = @AssesseeID then 1 
-            when rd.[Status]=1 and isnull(rd.id_emp_assessor,0)<>0 and @CurUserID in (select ContactID from AC_All_EmpIDS where EMP_ID = rd.id_emp_assessor) then 1 
-            when rd.[Status]=1 and isnull(rd.id_emp_assessor,0)=0 and isnull(ia.AssessorType_1,0)=2 and @CurUserID in (select ManagerID FROM @ManagerList) then 1 
-            when rd.[Status]=2 and isnull(rd.id_emp_assessor,0)<>0 and @CurUserID in (select ContactID from AC_All_EmpIDS where EMP_ID = rd.id_emp_assessor) then 1 
-            when rd.[Status]=2 and isnull(rd.id_emp_assessor,0)=0 and isnull(ia.AssessorType_1,1)=1 and isnull(rd.UseAssessor1ForManager,0)=1 and @CurUserID in (select ManagerID FROM @ManagerList) then 1 
-            when rd.[Status]=2 and isnull(rd.id_emp_assessor,0)=0 and isnull(ia.AssessorType_1,1)=2 and @CurUserID in (select ManagerID FROM @ManagerList) then 1 
-            when rd.[Status]=1 and ia.AssessorType_1=1 and isnull(rd.UseAssessor1ForManager,0)=1 and @CurUserID in (select ManagerID FROM @ManagerList) then -1  --'You cannot Edit because it is not your turn yet' 
-            when rd.[Status]=2 and ia.AssessorType_1=1 and @CurUserID=@AssesseeID then -3  --'You cannot Edit because you do not have a turn --eg directly to Status 2 like Iatriko or Epsilon -- or you have already completed your turn' 
-                       -- WARNING:  TO BE CHANGED FOR EVROPAIKI PISTI --
-            when rd.[Status]=0 and (@HasHREditorRights=1 or @AssesseeID=@CurUserID) then 1
-            else 0  -- generic lock
-    
-    end AS AllowEdit
-	, CASE WHEN @CurUserID <> @AssesseeID AND (@HasHREditorRights = 1 OR @HRPerNodeViewEmployee = 1) THEN 1 ELSE 0 END As AllowReset
-	, CASE WHEN @CurUserID <> @AssesseeID AND (@HasHREditorRights = 1 OR @HasHREditorPerCompanyRights = 1 OR @HRPerNodeViewEmployee = 1) AND @EvaluationShowEditBtnForHR = 1 THEN 1 ElSE 0 END    As AllowCorrect
-            , rd.[Status] AS Form_Status 
-            , ia.AssessorType_1, rd.id_emp_assessor AS Form_Assessor1_ID_EMP, rd.UseAssessor1ForManager AS Form_UseAssessor1ForManager
-            , ia.AssessorType_2, rd.id_emp_assessor_2 AS Form_Assessor2_ID_EMP
-            , ia.AssessorType_3, rd.id_emp_assessor_3 AS Form_Assessor3_ID_EMP
-    FROM SS_HRM_ASS_Results_Detail rd
-    JOIN SS_HRM_ASS_Results r ON rd.Ext_id_ass_res = r.Ext_id_ass_res
-    JOIN SS_HRM_ASS_INSTANCE_ASSESSMENTS ia ON rd.id_ass_instance = ia.id_ass_assistance AND r.id_ass = ia.id_ass
-    WHERE rd.ID = @ResultDetailID;
-
-	RETURN;
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbIsEmployeeDependent', 2, N'Is employee dependent',2)
 END
-
-GO
-IF @@ERROR<>0 AND @@TRANCOUNT>0 ROLLBACK TRANSACTION
-GO
-IF @@TRANCOUNT=0 BEGIN INSERT INTO #tmpErrors (Error) SELECT 1 BEGIN TRANSACTION END
-GO
-PRINT N'Altering [dbo].[SS_HRM_ASS_INSTANCE_AssessmentOverviewPerformanceStatistics]'
 GO
 
-ALTER PROCEDURE [dbo].[SS_HRM_ASS_INSTANCE_AssessmentOverviewPerformanceStatistics] @ExtAssInstance int, @ExtAssFormID int, @DepartmentID int, @ExcludeZeros int, @UseQuestionDescrForColumnNames int , @CurLangID int, @CurUserID int
-AS
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbIncreasesTaxDeductible' AND [Language] = 1) 
 BEGIN
-	SET NOCOUNT ON;
-	SET @UseQuestionDescrForColumnNames=0;
-
-	DECLARE @Questions AS TABLE(ParID int, ParDescr nvarchar(max));
-	INSERT INTO @Questions(ParID, ParDescr)
-    SELECT distinct p.Ext_id_ass_par, pp.DESCR
-    FROM SS_HRM_ASS_INSTANCE_ASSESSMENTS ia
-    JOIN SS_HRM_ASS_ASSESSMENTS a ON ia.id_ass=a.Ext_id_ass
-    JOIN SS_HRM_ASS_ASSESSMENTS_TYPE t ON t.Ext_id_ass=a.Ext_id_ass
-    JOIN SS_HRM_ASS_ASSESMENT_PARAMS p ON p.Ext_id_ass=a.Ext_id_ass and p.Ext_id_param_type=t.Ext_id_param_type
-    JOIN SS_HRM_ASS_PARAMS pp ON pp.Ext_id_ass_par=p.Ext_id_ass_par
-    WHERE ia.id_ass_assistance=@ExtAssInstance
-    AND ia.id_ass=@ExtAssFormID
-    ORDER BY p.Ext_id_ass_par;
-
-    DECLARE @PivotColumns nvarchar(max), @ScoreFormula nvarchar(max), @SQLQuery nvarchar(max),  @SQLQuery1 nvarchar(max), @SQLQuery2 nvarchar(max), @SQLQuery3 nvarchar(max);
-    IF isnull(@UseQuestionDescrForColumnNames,0)=1 BEGIN
-        SELECT @PivotColumns=COALESCE(@PivotColumns+',','')+QUOTENAME(ParID)+' AS '+QUOTENAME(left(ParDescr,2))
-        FROM (SELECT distinct ParID,ParDescr FROM @Questions) t;
-    END
-    ELSE BEGIN
-        SELECT @PivotColumns=COALESCE(@PivotColumns+',','')+QUOTENAME(ParID)
-        FROM (SELECT distinct ParID,ParDescr FROM @Questions) t;
-    END;
-                                                                                  
-    DECLARE @Is_Custom_Evropaiki int;
-    SET @Is_Custom_Evropaiki=isnull((select varValue from X_Vars where varkey='TmpEvropaiki'),0);                                                                                               
-    DECLARE @AssessmentShowWeightedResult int, @GoalObjectivesShowWeightedResult int;  --10/7/2017 GP DESS-119178
-    SET @AssessmentShowWeightedResult=isnull((select varValue from X_UIControl_Settings where varkey='AssessmentShowWeightedResult' AND ControlID=105),0); 
-    SET @GoalObjectivesShowWeightedResult=isnull((select varValue from X_UIControl_Settings where varkey='GoalObjectivesShowWeightedResult' AND ControlID=105),0);
-                                                                                                                
-	;WITH GroupedCriteria(CriterionID,QuestionID,[Weight])
-	AS
-	(
-	    SELECT t.Ext_id_param_type, p.Ext_id_ass_par, t.Varitita
-	    FROM SS_HRM_ASS_INSTANCE_ASSESSMENTS ia
-	    JOIN SS_HRM_ASS_ASSESSMENTS a on ia.id_ass = a.Ext_id_ass
-	    JOIN SS_HRM_ASS_ASSESSMENTS_TYPE t on t.Ext_id_ass=a.Ext_id_ass
-	    JOIN SS_HRM_ASS_ASSESMENT_PARAMS p on p.Ext_id_ass=a.Ext_id_ass and p.Ext_id_param_type=t.Ext_id_param_type
-	    WHERE ia.id_ass_assistance=@ExtAssInstance
-	    AND ia.id_ass=@ExtAssFormID
-	)
-	, CriteriaFormulas (CriterionID, Formula)
-	AS
-	(
-	    SELECT DISTINCT CriterionID, '('
-			+ STUFF((
-				SELECT '+['+cast(QuestionID as nvarchar(max))+']' 
-				FROM GroupedCriteria 
-				WHERE CriterionID=gc.CriterionID 
-				FOR XML PATH(''),TYPE).value('(./text())[1]','NVARCHAR(MAX)'),1,1,'') 
-	        +') / '+cast((SELECT count(*) FROM GroupedCriteria WHERE CriterionID=gc.CriterionID) as nvarchar(max)) 
-	        +' * '+cast(max([Weight])/100.0 as nvarchar(max)
-			) AS Formula
-	    FROM GroupedCriteria gc
-	    GROUP BY CriterionID,QuestionID
-	)                                                                                   
-	SELECT @ScoreFormula=STUFF((SELECT '+ ('+Formula+')'FROM CriteriaFormulas FOR XML PATH('')),1,1,'');
-                                                                        
-	SET @SQLQuery1=N'DECLARE @ExtAssInstance int, @ExtAssFormID int, @DepartmentID int, @ExcludeZeros int, @Is_Custom_Evropaiki int, @CurLangID int, @CurUserID int;
-	SET @ExtAssInstance='+cast(@ExtAssInstance as varchar(255))+';
-	SET @ExtAssFormID='+cast(@ExtAssFormID as varchar(255))+';
-	SET @DepartmentID='+case when @DepartmentID is null then 'null' else cast(@DepartmentID as varchar(255)) end+';
-	SET @ExcludeZeros='+cast(@ExcludeZeros as varchar(255))+';
-	SET @CurLangID='+cast(@CurLangID as varchar(255))+';
-	SET @CurUserID='+cast(@CurUserID as varchar(255))+';
-	SET @Is_Custom_Evropaiki=isnull((SELECT varValue FROM X_Vars WHERE varkey=''TmpEvropaiki''),0);                  
-	
-	DECLARE @ExtCurUserID int, @HasHREditorRights int,@AssessmentEditorRole int;
-	SET @ExtCurUserID=(SELECT EMP_ID FROM AC_All_EmpIDS WHERE ContactID=@CurUserID);
-	SET @HasHREditorRights=(SELECT case when (SELECT count(*) FROM XU_UserRoles ur WHERE ur.UsrId=@CurUserID AND ur.RoleId=1005)>0 then 1 else 0 end);
-	SET @AssessmentEditorRole=1017;
-	
-	;WITH EmpsInDept (ExtEmployeeID) AS
-	(
-	       SELECT a.EMP_ID FROM SS_GetDeptListFromNodeDown(@DepartmentID) d JOIN AC_Department_Contacts dc on dc.DepartmentID = d.ID and getdate() between dc.Startdate and isnull(dc.EndDate,''2049-12-31'') JOIN AC_All_EmpIDS a on dc.ContactID = a.ContactID WHERE dc.ContactID <> -2
-	)
-	, RawData (ExtEmployeeID, ExtAssessorID, ExtParID, Result) AS
-	(
-	       SELECT rd.ext_id_emp, rd.id_emp_assessor, e.id_ass_par
-		   , CASE WHEN ( (((@ExtCurUserID = rd.ext_id_emp) OR (@ExtCurUserID <> rd.id_emp_assessor AND @HasHREditorRights = 0 
-								AND (SELECT count(*) FROM AC_Department_Contacts dc JOIN SS_Employee e on e.ContactID = dc.ContactID
-									JOIN AC_All_EmpIDS_IncludingInactive ae on ae.ContactID = e.ContactID
-									WHERE getdate() between dc.Startdate and isnull(dc.Enddate, ''2049-12-31'') and getdate() <= isnull(e.FRDATE, ''2049-12-31'') 
-									AND ae.EMP_ID = rd.ext_id_emp 
-									AND dc.DepartmentID in (SELECT ID FROM SS_GetViewableDepartmentListPerNodePerRole (@ExtCurUserID,@AssessmentEditorRole))) = 0 )) 
-							AND isnull(ia.EnforceFormPrivacyAssessee,0) =1 AND CONVERT(date,getdate()) <= isnull(ia.EnforceFormPrivacyAssesseeTill,''2049-12-31''))
-						OR
-						(((@ExtCurUserID = rd.ext_id_emp) OR (@ExtCurUserID <> rd.id_emp_assessor AND @HasHREditorRights = 0 
-								AND (SELECT count(*) FROM AC_Department_Contacts dc JOIN SS_Employee e on e.ContactID = dc.ContactID
-									JOIN AC_All_EmpIDS_IncludingInactive ae on ae.ContactID = e.ContactID
-									WHERE getdate() between dc.Startdate and isnull(dc.Enddate, ''2049-12-31'') and getdate() <= isnull(e.FRDATE, ''2049-12-31'') 
-									AND ae.EMP_ID = rd.ext_id_emp 
-									AND dc.DepartmentID in (SELECT ID FROM SS_GetViewableDepartmentListPerNodePerRole (@ExtCurUserID,@AssessmentEditorRole))) = 0 )) 
-							AND isnull(ia.EnforceFormPrivacyAssessee,0) =1 AND CONVERT(date,getdate()) > isnull(ia.EnforceFormPrivacyAssesseeTill,''2049-12-31'') AND isnull(rd.[Status],0) <> 3)					 
-					   ) THEN 0 
-			 ELSE isnull(e.id_value,0)  END
-		   FROM SS_HRM_ASS_Results_Detail rd 
-		   JOIN SS_HRM_ASS_Results r on rd.Ext_id_ass_res = r.Ext_id_ass_res 
-		   JOIN SS_HRM_ASS_Results_Detail_Type rdt on rd.Ext_id_ass_res = rdt.Ext_id_ass_res and rd.Ext_id_emp = rdt.Ext_id_emp 
-		   JOIN SS_HRM_ASS_Execution e on e.id_ass_res = r.Ext_id_ass_res and e.id_emp = rd.Ext_id_emp and e.id_param_type = rdt.Ext_id_param_type 
-		   JOIN SS_HRM_ASS_INSTANCE_ASSESSMENTS ia ON rd.id_ass_instance = ia.id_ass_assistance AND r.id_ass = ia.id_ass
-		   WHERE rd.id_ass_instance = @ExtAssInstance AND r.id_ass = @ExtAssFormID 
-		   AND (isnull(@ExcludeZeros,0)=0 OR isnull(Result,0.0)<>0.0) 
-		   AND (@DepartmentID is null OR rd.ext_id_emp in (select ExtEmployeeID from EmpsInDept))
-	)	
-	, PivotedData ([ExtEmployeeID], [ExtAssessorID],' + @PivotColumns + ') AS
-	(
-	    SELECT [ExtEmployeeID], [ExtAssessorID], '+ @PivotColumns + ' 
-	    FROM RawData PIVOT (AVG(Result) FOR [ExtParID] IN (' + @PivotColumns + ')
-	    ) AS P
-	)
-	, Weights (ExtEmployeeID,AssessmentWeight,GoalSettingWeight) AS
-	(
-		SELECT emp.Ext_ID_EMP , ineg.AssessmentWeight,ineg.GoalSettingWeight
-		FROM PivotedData pd
-		LEFT JOIN SS_HRM_EMPGROUP_EMPLOYEES emp on emp.Ext_ID_EMP = pd.ExtEmployeeID and DATEADD(dd, DATEDIFF(dd, 0, getdate()), 0) between emp.StartDate and isnull(emp.EndDate,''2049-12-31'')
-		LEFT JOIN SS_HRM_EMPGROUPS eg on eg.EXT_ID_EMPGROUP = emp.Ext_ID_EMPGROUP AND eg.StatusID not in (2,12,22) AND DATEADD(dd, DATEDIFF(dd, 0, getdate()), 0) between eg.StartDate and isnull(eg.EndDate,''2049-12-31'')
-		LEFT JOIN SS_HRM_ASS_INSTANCE_EMPGROUPS ineg on ineg.Ext_ID_EMPGROUP = eg.EXT_ID_EMPGROUP AND ineg.StatusID not in (2,12,22)
-		WHERE ineg.Ext_ID_ASS_INSTANCE = @ExtAssInstance AND emp.StatusID not in (2,12,22) 
-	)'
-
-	SET @SQLQuery2 = case when @Is_Custom_Evropaiki = 1  then 'SELECT *, cast('+ case when @AssessmentShowWeightedResult = 1 then 'lbWeightedScore' else 'lbScore' end + ' + '+ case when @GoalObjectivesShowWeightedResult = 1 then 'lbWeightedGoalScore' else 'lbGoalScore' end + '  AS decimal(16,2)) AS lbTotalScore 
-	                                                           FROM (' else '' end  
-	+ 'SELECT a_emp.ContactID 
-	       , emp.Code AS lbEmpCode
-	       , ISNULL(lo_last_c.VALUE, c.Name) as lbEmpLastName
-	       , coalesce(lo_first_c.VALUE, c.FirstName, '''') as lbEmpFirstName  	       
-	       , emp.HRDATE AS lbHireDate
-	       , isnull(ISNULL(lo_last_assc.VALUE, assc.NAME)  + '' '' + coalesce(lo_first_assc.VALUE, assc.FirstName, ''''),
-	              (
-	                SELECT TOP 1 ISNULL(lo_last_c.VALUE, c.Name) + '' '' + coalesce(lo_first_c.VALUE, c.FirstName, '''') 
-	                FROM [SS_GetDeptListFromNodeUp]((select TOP 1 DepartmentID from AC_Department_Contacts where ContactID = a_emp.ContactID and getdate() between StartDate and isnull(EndDate,''2049-12-31''))) d
-	                JOIN AC_Department_Contacts dc on dc.DepartmentID = d.DepartmentID and dc.IsManager=1 and dc.ContactID not in (-2,a_emp.ContactID)
-	                JOIN AC_Contacts c on dc.ContactID = c.ContactID
-	                LEFT JOIN L_Object lo_last_c on lo_last_c.ID_TABLE = c.ContactID AND lo_last_c.TABLE_NAME = ''AC_Contacts'' AND lo_last_c.FieldName = ''LastName'' AND lo_last_c.ID_LANGUAGES = @CurLangID
-	                LEFT JOIN L_Object lo_first_c on lo_first_c.ID_TABLE = c.ContactID AND lo_first_c.TABLE_NAME = ''AC_Contacts'' AND lo_first_c.FieldName = ''FirstName'' AND lo_first_c.ID_LANGUAGES = @CurLangID
-	              )
-	       ) AS lbAssessor
-	       , (select TOP 1 ISNULL(o.VALUE, dn.Descr) as Descr
-	              FROM AC_Department_Contacts dc
-	              JOIN AC_Departments d on dc.DepartmentID = d.ID
-	              JOIN AC_DepartmentNames dn on d.DepartmentNameID = dn.ID
-	              LEFT JOIN L_Object o ON o.TABLE_NAME = ''AC_DepartmentNames'' AND o.ID_TABLE = dn.ID AND o.ID_LANGUAGES = @CurLangID
-	              WHERE dc.ContactID = a_emp.ContactID
-	              AND getdate() between dc.Startdate and isnull(dc.EndDate, ''2049-12-31'')) AS lbDepartment
-	       ,'
-		   
-		   SET @SQLQuery3 = N'LEFT((SELECT isnull(lo.value,c.DESCR) + '' ('' + cast(cr.PERC as varchar(100)) + '')''+ '' , '' FROM SS_COST_REC cr JOIN SS_COST c on c.Ext_CODE = cr.COST_CODE and c.Ext_ID_CMP = cr.ID_CMP LEFT JOIN L_Object lo on lo.ID_TABLE = c.ID1 AND lo.TABLE_NAME = ''SS_COST'' AND lo.ID_LANGUAGES = @CurLangID WHERE cr.ID_EMP = a_emp.EMP_ID and cr.ID_CMP = a_emp.ID_CMP AND getdate() between cr.[START_DATE] and cr.END_DATE ORDER BY cr.PERC FOR XML PATH(''''))
-	                , LEN((SELECT isnull(lo.value,c.DESCR) + '' ('' + cast(cr.PERC as varchar(100)) + '')''+ '' , '' FROM SS_COST_REC cr JOIN SS_COST c on c.Ext_CODE = cr.COST_CODE and c.Ext_ID_CMP = cr.ID_CMP LEFT JOIN L_Object lo on lo.ID_TABLE = c.ID1 AND lo.TABLE_NAME = ''SS_COST'' AND lo.ID_LANGUAGES = @CurLangID WHERE cr.ID_EMP = a_emp.EMP_ID and cr.ID_CMP = a_emp.ID_CMP AND getdate() between cr.[START_DATE] and cr.END_DATE ORDER BY cr.PERC FOR XML PATH(''''))) - 1) 
-	       AS lbCostcenter
-	       , ' + @PivotColumns + ', cast(' + @ScoreFormula  + ' as decimal(16,2)) AS lbScore   
-		   '+ case when @AssessmentShowWeightedResult = 1 then ', cast( cast(' + @ScoreFormula  + ' as decimal(16,2)) * w.AssessmentWeight as decimal(16,2) ) AS lbWeightedScore' else '' end + '
-	       '+ case when @Is_Custom_Evropaiki = 1 then ', goalscores.GoalScore AS lbGoalScore 
-		   '+ case when @GoalObjectivesShowWeightedResult = 1 then ', cast (goalscores.GoalScore * w.GoalSettingWeight as decimal(16,2) ) AS lbWeightedGoalScore' else '' end  else '' end + '
-	FROM PivotedData d
-	LEFT JOIN AC_All_EmpIDS a_emp on d.ExtEmployeeID = a_emp.EMP_ID
-	LEFT JOIN SS_Employee emp on a_emp.FEMP_ID = emp.ID_EMP
-	LEFT JOIN AC_Contacts c on c.ContactID = emp.ContactID
-	LEFT JOIN L_Object lo_last_c on lo_last_c.ID_TABLE = c.ContactID AND lo_last_c.TABLE_NAME = ''AC_Contacts'' AND lo_last_c.FieldName = ''LastName'' AND lo_last_c.ID_LANGUAGES = @CurLangID
-	LEFT JOIN L_Object lo_first_c on lo_first_c.ID_TABLE = c.ContactID AND lo_first_c.TABLE_NAME = ''AC_Contacts'' AND lo_first_c.FieldName = ''FirstName'' AND lo_first_c.ID_LANGUAGES = @CurLangID
-	LEFT JOIN AC_All_EmpIDS a_ass on d.ExtAssessorID = a_ass.EMP_ID
-	LEFT JOIN SS_Employee ass on a_ass.FEMP_ID = ass.ID_EMP
-	LEFT JOIN AC_Contacts assc on assc.ContactID = ass.ContactID
-	LEFT JOIN L_Object lo_last_assc on lo_last_assc.ID_TABLE = assc.ContactID AND lo_last_assc.TABLE_NAME = ''AC_Contacts'' AND lo_last_assc.FieldName = ''LastName'' AND lo_last_assc.ID_LANGUAGES = @CurLangID
-	LEFT JOIN L_Object lo_first_assc on lo_first_assc.ID_TABLE = assc.ContactID AND lo_first_assc.TABLE_NAME = ''AC_Contacts'' AND lo_first_assc.FieldName = ''FirstName'' AND lo_first_assc.ID_LANGUAGES = @CurLangID
-	LEFT JOIN ( SELECT o.id_emp AS ExtEmployeeID, cast(SUM(o.RealPerformance * o.Varitita/100) as decimal(16,2)) AS GoalScore 
-				FROM SS_HRM_ASS_INSTANCE_OBJECTIVES_EMP o 
-				WHERE id_Ass_instance = @ExtAssInstance AND (isnull(@ExcludeZeros,0)=0 OR isnull(o.RealPerformance,0)<>0) 
-				GROUP BY o.id_emp 
-			  ) goalscores on d.ExtEmployeeID = goalscores.ExtEmployeeID
-	LEFT JOIN Weights w on w.ExtEmployeeID = d.ExtEmployeeID   
-	'+ case when @Is_Custom_Evropaiki=1 then ') InnerTbl' else '' end
-	;
-	    
-	SET    @SQLQuery = @SQLQuery1 + @SQLQuery2    + @SQLQuery3                                                            
-	--PRINT @SQLQuery;
-	EXEC sp_executesql @SQLQuery;
-
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbIncreasesTaxDeductible', 1, N'Αυξάνει το αφορολόγητο του εργαζόμενου',2)
 END
 GO
-IF @@ERROR<>0 AND @@TRANCOUNT>0 ROLLBACK TRANSACTION
-GO
-IF @@TRANCOUNT=0 BEGIN INSERT INTO #tmpErrors (Error) SELECT 1 BEGIN TRANSACTION END
-GO
-PRINT N'Creating [dbo].[SS_Application_EmployeeChildren]'
-GO
-IF OBJECT_ID(N'[dbo].[SS_Application_EmployeeChildren]', 'U') IS NULL
-CREATE TABLE [dbo].[SS_Application_EmployeeChildren]
-(
-[ID] [int] NOT NULL,
-[ApplicationID] [int] NOT NULL,
-[Name] [varchar] (255) COLLATE Greek_CI_AS NOT NULL,
-[GenderID] [int] NOT NULL,
-[Birthdate] [datetime] NOT NULL,
-[IsEmployeeDependent] [int] NULL,
-[IncreasesTaxDeductible] [int] NULL,
-[Comments] [varchar] (2000) COLLATE Greek_CI_AS NULL,
-[Ext_ID_EMP] [int] NULL,
-[Ext_ID_CHILDREN] [int] NULL,
-[GUID] [uniqueidentifier] NULL
-)
-GO
-IF @@ERROR<>0 AND @@TRANCOUNT>0 ROLLBACK TRANSACTION
-GO
-IF @@TRANCOUNT=0 BEGIN INSERT INTO #tmpErrors (Error) SELECT 1 BEGIN TRANSACTION END
-GO
-PRINT N'Creating primary key [PK_SS_Application_EmployeeChildren] on [dbo].[SS_Application_EmployeeChildren]'
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'PK_SS_Application_EmployeeChildren' AND object_id = OBJECT_ID(N'[dbo].[SS_Application_EmployeeChildren]'))
-ALTER TABLE [dbo].[SS_Application_EmployeeChildren] ADD CONSTRAINT [PK_SS_Application_EmployeeChildren] PRIMARY KEY CLUSTERED  ([ID])
-GO
-IF @@ERROR<>0 AND @@TRANCOUNT>0 ROLLBACK TRANSACTION
-GO
-IF @@TRANCOUNT=0 BEGIN INSERT INTO #tmpErrors (Error) SELECT 1 BEGIN TRANSACTION END
-GO
-PRINT N'Creating [dbo].[SS_ApplicationFamilyStatusDatasource]'
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[SS_ApplicationFamilyStatusDatasource]') AND (type = 'IF' OR type = 'FN' OR type = 'TF'))
-EXEC sp_executesql N'
-
-
-CREATE FUNCTION [dbo].[SS_ApplicationFamilyStatusDatasource]
-(	
-	@ApplicationID  int, @GUID  uniqueidentifier, @EmployeeID int, @CurLanguageID int
-)
-RETURNS @RetTbl TABLE (RowStatus varchar(max),	ContactID int,	ChildName varchar(max), GenderID int,Gender varchar(max), Birthdate datetime, IsEmployeeDependent int, IncreasesTaxDeductible int, Comments varchar(2000), Ext_ID_CHILDREN int,  GUID uniqueidentifier, EmployeeChildrenID int) 
-AS
-BEGIN 
-	
-	INSERT @RetTbl
-	SELECT case when ssa.ID is null then ''lbExistingRowNoChanges'' else ''lbExistingRowChangesRequested'' end AS RowStatus
-	, @EmployeeID AS ContactID
-	, isnull(ssa.Name,ec.CHILD_NAME) AS ChildName
-	, isnull(aec_g.ID,ec_g.ID)  as GenderID
-	, isnull(isnull(aec_o.VALUE,aec_g.Descr ),isnull(ec_o.value,ec_g.Descr)) AS Gender
-	, isnull(ssa.Birthdate,ec.BIRTHDATE) As Birthdate
-	, isnull (ssa.IsEmployeeDependent,ec.VARINEI) As IsEmployeeDependent
-	, isnull(ssa.IncreasesTaxDeductible,ec.AFKSISI_AFOROL) As IncreasesTaxDeductible
-	, ssa.Comments
-	, ec.ID_CHILDREN AS Ext_ID_CHILDREN                            
-	, ssa.GUID
-	, ssa.ID as EmployeeChildrenID
-	FROM SS_EMP_CHILDREN ec
-	INNER JOIN SS_EMPLOYEE e on e.ID_EMP = ec.ID_EMP
-	LEFT JOIN L_Genders ec_g on ec_g.Ext_ID = ec.FYLO
-	LEFT JOIN L_Object ec_o ON ec_o.TABLE_NAME=''L_Genders'' AND ec_o.ID_TABLE=ec_g.ID AND isnull(ec_o.FieldName,''DESCR'')=''DESCR'' AND ec_o.ID_LANGUAGES=@CurLanguageID
-	LEFT JOIN SS_Application_EmployeeChildren ssa on ssa.Ext_ID_EMP = ec.ID_EMP AND ssa.Ext_ID_CHILDREN = ec.ID_CHILDREN AND ssa.GUID = @GUID
-	LEFT JOIN L_Genders aec_g on aec_g.ID = ssa.GenderID
-	LEFT JOIN L_Object aec_o ON aec_o.TABLE_NAME=''L_Genders'' AND aec_o.ID_TABLE=aec_g.ID AND isnull(aec_o.FieldName,''DESCR'')=''DESCR'' AND aec_o.ID_LANGUAGES=@CurLanguageID
-	WHERE e.ContactID=@EmployeeID
-	AND (@ApplicationID=-999 OR ssa.ApplicationID=@ApplicationID)
-	UNION
-	SELECT ''lbNewRow''
-	, @EmployeeID
-	, ssa.Name
-	, ssa_g.ID  as GenderID
-	, isnull(ssa_o.value,ssa_g.Descr) AS Gender
-	, ssa.Birthdate
-	, ssa.IsEmployeeDependent
-	, ssa.IncreasesTaxDeductible
-	, ssa.Comments
-	, ssa.Ext_ID_CHILDREN                                    
-	, ssa.GUID
-	, ssa.ID as EmployeeChildrenID
-	FROM SS_Application_EmployeeChildren ssa
-	LEFT JOIN L_Genders ssa_g on ssa_g.ID = ssa.GenderID
-	LEFT JOIN L_Object ssa_o ON ssa_o.TABLE_NAME=''L_Genders'' AND ssa_o.ID_TABLE=ssa_g.ID AND isnull(ssa_o.FieldName,''DESCR'')=''DESCR'' AND ssa_o.ID_LANGUAGES=@CurLanguageID
-	WHERE (@ApplicationID=-999 AND ssa.[GUID]=@GUID) OR (ssa.ApplicationID=@ApplicationID AND @ApplicationID<>-999)
-
-	RETURN
-END
-
-'
-GO
-IF @@ERROR<>0 AND @@TRANCOUNT>0 ROLLBACK TRANSACTION
-GO
-IF @@TRANCOUNT=0 BEGIN INSERT INTO #tmpErrors (Error) SELECT 1 BEGIN TRANSACTION END
-GO
-PRINT N'Altering [dbo].[SS_HRM_ASS_GetEmployees]'
-GO
-
-
-ALTER FUNCTION [dbo].[SS_HRM_ASS_GetEmployees]
-(	
-	@InstanceID int, @DepartmentID int, @CurUser int, @CurLanguageID int, @ShowOnlyDirect int  -- 0 No, 1 Yes
-)
-RETURNS @RetTbl TABLE (ID int,	Descr varchar(255),	IsOwnAssessment int,	IsComplete int) 
-AS
-BEGIN 
-	-- Custom (BasicForms 1,2,3): Required fields @InstanceID,@CurUser,@CurLanguageID,@ShowOnlyDirect. @DepartmentID is not used -> NULL
-	-- Default: Required fields @InstanceID,@CurUser,@CurLanguageID,@DepartmentID. @ShowOnlyDirect is not used -> NULL
-
-	DECLARE @Ext_id_ass_instance int,@HasBasicForms int, @ExtCurrentUserID int, @IsHREditor int,@IsHREditorPerCompany int;
-
-	SET @Ext_id_ass_instance = (SELECT Ext_id_ass_instance FROM SS_HRM_ASS_INSTANCES WHERE ID = @InstanceID);
-	SET @HasBasicForms = (SELECT HasBasicForms FROM SS_HRM_ASS_INSTANCES WHERE ID = @InstanceID);
-	SET @ExtCurrentUserID = (select EMP_ID FROM AC_All_EmpIDS WHERE ContactID = @CurUser);
-	SET @IsHREditor = case when (select count(*) FROM XU_UserRoles WHERE RoleID = 1005 AND UsrId = @CurUser)>0 then 1 else 0 end;
-	SET @IsHREditorPerCompany = case when (select count(*) FROM XU_UserRoles WHERE RoleID = 1011 AND UsrId = @CurUser)>0 then 1 else 0 end;
-
-	DECLARE @AssessmentEditorRole int; --DESS-115639
-	SET @AssessmentEditorRole= 1017;
-
-	IF @InstanceID is NULL  RETURN;
-
-	IF @HasBasicForms is not null BEGIN
-		IF @HasBasicForms = 3 BEGIN
-			
-			INSERT @RetTbl
-			SELECT EmployeeID AS ID,
-				CASE WHEN min(AADescr) = 0 then ' ' + MAX(coalesce(lo_last.VALUE, ac.Name,'')) + ' ' + MAX(coalesce(lo_first.VALUE, ac.FirstName, '') )
-					WHEN min(AADescr) = 1 then '[D] ' + MAX(coalesce(lo_last.VALUE, ac.Name,'')) + ' ' + MAX(coalesce(lo_first.VALUE, ac.FirstName, '') )
-					ELSE '[I] ' + MAX(coalesce(lo_last.VALUE, ac.Name,'')) + ' ' + MAX(coalesce(lo_first.VALUE, ac.FirstName, '') ) END AS Descr,
-				IsOwnAssessment,
-				min(IsComplete) AS IsComplete
-			FROM
-			(
-				SELECT distinct a.EmployeeID, (case when a.StatusID = 4 then 1 else 0 end) AS IsComplete, (case when a.EmployeeID = @CurUser then 1 else 0 end) AS IsOwnAssessment
-					, case when a.EmployeeID = @CurUser then 0 else cm.AA end AS AA
-					, a.AssessorID
-					,CASE WHEN EmployeeID = @CurUser THEN 0--' '
-						  WHEN AssessorID = @CurUser THEN 1--'[D] '
-						  ELSE 2 END AS AADescr--'[I] ' END AS AADescr
-				FROM SS_HRM_ASS_INSTANCE_SimpleAssessments a
-				CROSS APPLY fnSS_ContactManagers_SubsNew(a.EmployeeID, getdate(),1) cm
-				JOIN SS_EMPLOYEE e on a.EmployeeID = e.ContactID
-				WHERE a.InstanceID = @InstanceID
-				AND (@IsHREditor = 1
-				OR (@IsHREditorPerCompany=1 AND e.ID_CMP in (select ID_CMP FROM XU_UserHREditorCompanies WHERE ContactID = @CurUser))
-				OR a.EmployeeID = @CurUser
-				OR (a.AssessorID = @CurUser AND cm.ManagerContactId = @CurUser)
-				OR @CurUser = cm.ManagerContactId)
-		
-				UNION
-				
-				SELECT distinct g.EmployeeID, (case when g.StatusID = 3 then 1 else 0 end) AS IsComplete, (case when g.EmployeeID = @CurUser then 1 else 0 end) As IsOwnAssessment
-					, case when g.EmployeeID = @CurUser then 0 else cm.AA end AS AA
-					, g.AssessorID
-					,CASE WHEN EmployeeID = @CurUser THEN 0--' '
-						 WHEN AssessorID = @CurUser THEN 1--'[D] '
-						 ELSE 2 END AS AADescr-- '[I] ' END AS AADescr
-				FROM SS_HRM_ASS_INSTANCE_SimpleGoalSet g
-				CROSS APPLY fnSS_ContactManagers_SubsNew(g.EmployeeID, getdate(),1) cm
-				JOIN SS_EMPLOYEE e on g.EmployeeID = e.ContactID
-				WHERE g.InstanceID = @InstanceID
-				AND (@IsHREditor = 1
-				OR (@IsHREditorPerCompany=1 AND e.ID_CMP in (select ID_CMP FROM XU_UserHREditorCompanies WHERE ContactID = @CurUser))
-				OR g.EmployeeID = @CurUser
-				OR (g.AssessorID = @CurUser AND cm.ManagerContactId = @CurUser)
-				OR @CurUser = cm.ManagerContactId)
-		
-				UNION
-				-- Assessments
-				SELECT distinct e.ContactID as EmployeeID
-					, (case when rd.[Status] in (2,3) then 1 else 0 end) AS IsComplete ---L_AssessmentStatus
-					, (case when e.ContactID = @CurUser then 1 else 0 end) AS IsOwnAssessment
-					, case when e.ContactID = @CurUser then 0 else cm.AA end AS AA
-					, e_assessor.ContactID as AssessorID
-					,CASE WHEN e.ContactID = @CurUser THEN 0--' '
-						  WHEN e_assessor.ContactID = @CurUser THEN 1--'[D] '
-						  ELSE 2 END AS AADescr --'[I] ' END AS AADescr
-				FROM SS_HRM_ASS_Results_Detail rd
-				JOIN SS_HRM_ASS_Results d on rd.Ext_id_ass_res = d.Ext_id_ass_res
-				JOIN SS_HRM_ASS_ASSESSMENTS a on d.id_ass = a.Ext_id_ass
-				JOIN SS_HRM_ASS_INSTANCES ai on rd.id_ass_instance = ai.Ext_id_ass_instance
-				JOIN AC_All_EmpIDS aa on rd.Ext_id_emp = aa.EMP_ID
-				JOIN SS_EMPLOYEE e on aa.FEMP_ID = e.ID_EMP
-				LEFT JOIN AC_All_EmpIDS aa_assessor on rd.id_emp_assessor = aa_assessor.EMP_ID
-				LEFT JOIN SS_EMPLOYEE e_assessor on aa_assessor.FEMP_ID = e_assessor.ID_EMP
-				OUTER APPLY fnSS_ContactManagers_SubsNew(e.ContactID, getdate(),1) cm
-				WHERE ai.ID = @Ext_id_ass_instance and ai.HasDetailedForms = 1 and ai.HasBasicForms = 3 -- @ass_instance
-				AND (@IsHREditor = 1
-				OR (@IsHREditorPerCompany=1 AND e.ID_CMP in (select ID_CMP FROM XU_UserHREditorCompanies WHERE ContactID = @CurUser))
-				OR e.ContactID = @CurUser
-				OR (rd.id_emp_assessor = @CurUser AND cm.ManagerContactId = @CurUser)
-				OR @CurUser = cm.ManagerContactId)
-		
-				UNION
-				--Questioners
-				SELECT distinct e.ContactID as EmployeeID
-					, cast( empqnr.IsComplete as Int) as IsComplete
-					, (case when e.ContactID = @CurUser then 1 else 0 end) AS IsOwnAssessment
-					, case when e.ContactID = @CurUser then 0 else cm.AA end AS AA
-					, null as AssessorID
-					,CASE WHEN e.ContactID = @CurUser THEN 0--' '
-						--WHEN e_assessor.ContactID = @CurrUser THEN '[D] '
-						ELSE 2 END AS AADescr--'[I] ' END AS AADescr
-				FROM SS_HRM_ASS_INSTANCE_QNR_PARTICIPANTS qnrp
-				JOIN SS_HRM_ASS_INSTANCE_QNR qnr on qnr.Ext_id = qnrp.id_ass_instance_qnr
-				JOIN SS_HRM_ASS_INSTANCES ai on qnr.id_ass_instance = ai.Ext_id_ass_instance
-				JOIN SS_HRM_ASS_INSTANCE_EMP_QNR empqnr on empqnr.id_ass_instance_questionnaire = qnrp.id_ass_instance_qnr and empqnr.id_emp = qnrp.id_emp
-				JOIN AC_All_EmpIDS aa on qnrp.id_emp = aa.EMP_ID
-				JOIN SS_EMPLOYEE e on aa.FEMP_ID = e.ID_EMP
-				OUTER APPLY fnSS_ContactManagers_SubsNew(e.ContactID, getdate(),1) cm
-				WHERE ai.id = @Ext_id_ass_instance and ai.HasDetailedForms = 1 and ai.HasBasicForms = 3 -- @ass_instance
-				AND (@IsHREditor = 1
-				OR (@IsHREditorPerCompany=1 AND e.ID_CMP in (select ID_CMP FROM XU_UserHREditorCompanies WHERE ContactID = @CurUser))
-				OR e.ContactID = @CurUser
-				--OR (rd.id_emp_assessor = @CurrUser AND cm.ManagerContactId = @CurrUser)
-				OR @CurUser = cm.ManagerContactId)
-		
-			) InnerTbl
-			JOIN AC_Contacts ac ON ac.ContactID = InnerTbl.EmployeeID
-			LEFT JOIN L_Object lo_last on lo_last.ID_TABLE = ac.ContactID AND lo_last.TABLE_NAME = 'AC_Contacts' AND lo_last.FieldName = 'LastName' AND lo_last.ID_LANGUAGES = @CurLanguageID
-			LEFT JOIN L_Object lo_first on lo_first.ID_TABLE = ac.ContactID AND lo_first.TABLE_NAME = 'AC_Contacts' AND lo_first.FieldName = 'FirstName' AND lo_first.ID_LANGUAGES = @CurLanguageID
-			WHERE (CASE WHEN @ShowOnlyDirect = 1 AND (EmployeeID = @CurUser OR AssessorID = @CurUser) THEN 1
-						WHEN @ShowOnlyDirect = 0 THEN 1 ELSE 0 END) = 1
-			GROUP BY EmployeeID, IsOwnAssessment--, PreDescr--, AssessorID
-			ORDER BY Descr
-			
-			RETURN
-		END
-		ELSE IF @HasBasicForms in (1,2) BEGIN
-			IF @ShowOnlyDirect = 1 BEGIN
-
-				INSERT @RetTbl
-				SELECT distinct InnerTbl.ID
-					, (CASE when IsOwnAssessment = 1 THEN ' ' + MAX(coalesce(lo_last.VALUE, ac.Name,'')) + ' ' + MAX(coalesce(lo_first.VALUE, ac.FirstName, '') ) else '[D] ' + MAX(coalesce(lo_last.VALUE, ac.Name,'')) + ' ' + MAX(coalesce(lo_first.VALUE, ac.FirstName, '') ) END) AS Descr
-					, IsOwnAssessment
-					, min(IsComplete) AS IsComplete
-				FROM
-				(
-					SELECT a.EmployeeID as ID
-					, (case when a.EmployeeID = @CurUser then 1 else 0 end) AS IsOwnAssessment
-					, (case when a.StatusID = 4 then 1 else 0 end) AS IsComplete
-					, a.AssessorID
-					FROM SS_HRM_ASS_INSTANCE_SimpleAssessments a
-					WHERE a.InstanceID = @InstanceID
-					AND (a.EmployeeID = @CurUser OR a.AssessorID = @CurUser)
-				
-					UNION
-				
-					SELECT g.EmployeeID AS ID
-					, (case when g.EmployeeID = @CurUser then 1 else 0 end) AS IsOwnAssessment
-					, (case when g.StatusID = 3 then 1 else 0 end) AS IsComplete
-					, g.AssessorID
-					FROM SS_HRM_ASS_INSTANCE_SimpleGoalSet g
-					WHERE g.InstanceID = @InstanceID
-					AND (g.EmployeeID = @CurUser OR g.AssessorID = @CurUser)
-					) InnerTbl
-					JOIN AC_Contacts ac ON ac.ContactID = InnerTbl.ID 
-					LEFT JOIN L_Object lo_last on lo_last.ID_TABLE = ac.ContactID AND lo_last.TABLE_NAME = 'AC_Contacts' AND lo_last.FieldName = 'LastName' AND lo_last.ID_LANGUAGES = @CurLanguageID
-					LEFT JOIN L_Object lo_first on lo_first.ID_TABLE = ac.ContactID AND lo_first.TABLE_NAME = 'AC_Contacts' AND lo_first.FieldName = 'FirstName' AND lo_first.ID_LANGUAGES = @CurLanguageID
-					GROUP BY InnerTbl.ID, IsOwnAssessment, AssessorID
-
-					RETURN
-			END
-			ELSE BEGIN
-				
-				INSERT @RetTbl
-				SELECT EmployeeID AS ID,
-				CASE WHEN EmployeeID = @CurUser THEN ' ' + MAX(coalesce(lo_last.VALUE, ac.Name,'')) + ' ' + MAX(coalesce(lo_first.VALUE, ac.FirstName, '') )
-					 WHEN AssessorID = @CurUser THEN '[D] ' + MAX(coalesce(lo_last.VALUE, ac.Name,'')) + ' ' +MAX(coalesce(lo_first.VALUE, ac.FirstName, '') )
-					 ELSE '[I] ' + MAX(coalesce(lo_last.VALUE, ac.Name,'')) + ' ' + MAX(coalesce(lo_first.VALUE, ac.FirstName, '') ) END AS Descr,
-				IsOwnAssessment,
-				min(IsComplete) AS IsComplete
-				FROM
-				(
-				
-					SELECT distinct a.EmployeeID, (case when a.StatusID = 4 then 1 else 0 end) AS IsComplete, (case when a.EmployeeID = @CurUser then 1 else 0 end) AS IsOwnAssessment
-					, case when a.EmployeeID = @CurUser then 0 else cm.AA end AS AA
-					, a.AssessorID
-					FROM SS_HRM_ASS_INSTANCE_SimpleAssessments a
-					CROSS APPLY fnSS_ContactManagers_SubsNew(a.EmployeeID, getdate(),1) cm
-					JOIN SS_EMPLOYEE e on a.EmployeeID = e.ContactID
-					WHERE a.InstanceID = @InstanceID
-					AND (@IsHREditor = 1
-					OR (@IsHREditorPerCompany=1 AND e.ID_CMP in (select ID_CMP FROM XU_UserHREditorCompanies WHERE ContactID = @CurUser))
-					OR a.EmployeeID = @CurUser
-					OR (a.AssessorID = @CurUser AND cm.ManagerContactId = @CurUser)
-					OR @CurUser = cm.ManagerContactId)
-				
-					UNION
-					
-					SELECT distinct g.EmployeeID, (case when g.StatusID = 3 then 1 else 0 end) AS IsComplete, (case when g.EmployeeID = @CurUser then 1 else 0 end) As IsOwnAssessment
-					, case when g.EmployeeID = @CurUser then 0 else cm.AA end AS AA
-					, g.AssessorID
-					FROM SS_HRM_ASS_INSTANCE_SimpleGoalSet g
-					CROSS APPLY fnSS_ContactManagers_SubsNew(g.EmployeeID, getdate(),1) cm
-					JOIN SS_EMPLOYEE e on g.EmployeeID = e.ContactID
-					WHERE g.InstanceID = @InstanceID
-					AND (@IsHREditor = 1
-					OR (@IsHREditorPerCompany=1 AND e.ID_CMP in (select ID_CMP FROM XU_UserHREditorCompanies WHERE ContactID = @CurUser))
-					OR g.EmployeeID = @CurUser
-					OR (g.AssessorID = @CurUser AND cm.ManagerContactId = @CurUser)
-					OR @CurUser = cm.ManagerContactId)
-				) InnerTbl
-				JOIN AC_Contacts ac ON ac.ContactID = InnerTbl.EmployeeID
-				LEFT JOIN L_Object lo_last on lo_last.ID_TABLE = ac.ContactID AND lo_last.TABLE_NAME = 'AC_Contacts' AND lo_last.FieldName = 'LastName' AND lo_last.ID_LANGUAGES = @CurLanguageID
-				LEFT JOIN L_Object lo_first on lo_first.ID_TABLE = ac.ContactID AND lo_first.TABLE_NAME = 'AC_Contacts' AND lo_first.FieldName = 'FirstName' AND lo_first.ID_LANGUAGES = @CurLanguageID
-				WHERE (CASE WHEN @ShowOnlyDirect = 1 AND (EmployeeID = @CurUser OR AssessorID = @CurUser) THEN 1
-				WHEN @ShowOnlyDirect = 0 THEN 1 ELSE 0 END) = 1
-				GROUP BY EmployeeID, IsOwnAssessment, AssessorID
-				ORDER BY Descr
-
-				RETURN
-			END		
-		END
-	END
-	ELSE BEGIN
-
-		WITH AssessedEmployees (ContactID,ContactType) AS
-		(
-			SELECT up.EmployeeID AS ContactID, (case when EmployeeID = @CurUser then 'Me' else 'MyEmployeeAssessed' end) AS ContactType
-			FROM SS_HRM_ASS_Results_Detail rd
-			JOIN AC_All_EmpIDS ae on rd.Ext_id_emp = ae.EMP_ID
-			JOIN SS_HRM_ASS_INSTANCES i on i.Ext_id_ass_instance = rd.id_ass_instance
-			LEFT JOIN SS_HRM_ASS_INSTANCE_FinalSignatures fs on fs.InstanceID = i.id AND ae.ContactID = fs.AssessedEmployeeID
-			CROSS APPLY [dbo].SS_GetUserPermsForDeptOrGroupEmployees (@CurUser,@DepartmentID,null,getdate(),null,null) up
-			WHERE Rights <> 0 AND rd.id_ass_instance = @Ext_id_ass_instance AND up.EmployeeID = ae.ContactID
-			AND (rd.Ext_id_emp = @ExtCurrentUserID OR rd.id_emp_assessor = @ExtCurrentUserID OR rd.id_emp_assessor_2 = @ExtCurrentUserID OR rd.id_emp_assessor_3 = @ExtCurrentUserID OR fs.AssignedToContactIDForSignature = @CurUser)
-
-			UNION --new Show assessor/assesse/signature not based on rights (an employee to an employee)
-			SELECT ae.ContactID AS ContactID, (case when ae.ContactID = @CurUser then 'Me' else 'MyEmployeeAssessed' end) AS ContactType
-			FROM SS_HRM_ASS_Results_Detail rd
-			JOIN AC_All_EmpIDS ae on rd.Ext_id_emp = ae.EMP_ID
-			JOIN AC_Department_Contacts dc on ae.ContactID = dc.ContactID and getdate() between dc.StartDate and isnull(dc.EndDate, '2049-12-31')
-			JOIN SS_HRM_ASS_INSTANCES i on i.Ext_id_ass_instance = rd.id_ass_instance
-			LEFT JOIN SS_HRM_ASS_INSTANCE_FinalSignatures fs on fs.InstanceID = i.id AND ae.ContactID = fs.AssessedEmployeeID			
-			WHERE rd.id_ass_instance = @Ext_id_ass_instance 
-			AND (rd.Ext_id_emp = @ExtCurrentUserID OR rd.id_emp_assessor = @ExtCurrentUserID OR rd.id_emp_assessor_2 = @ExtCurrentUserID OR rd.id_emp_assessor_3 = @ExtCurrentUserID OR fs.AssignedToContactIDForSignature = @CurUser)
-			AND dc.DepartmentID in (select ID from SS_GetViewableDepartmentList(@CurUser,6,1)) 
-			
-			UNION
-			SELECT ae.ContactID, 'OutsideMyDeptsAssessed' AS ContactTYpe
-			FROM SS_HRM_ASS_Results_Detail rd
-			JOIN AC_All_EmpIDS ae on rd.Ext_id_emp = ae.EMP_ID
-			JOIN AC_Department_Contacts dc on ae.ContactID = dc.ContactID and getdate() between dc.StartDate and isnull(dc.EndDate, '2049-12-31')
-			JOIN SS_HRM_ASS_INSTANCES i on i.Ext_id_ass_instance = rd.id_ass_instance
-			LEFT JOIN SS_HRM_ASS_INSTANCE_FinalSignatures fs on fs.InstanceID = i.id AND ae.ContactID = fs.AssessedEmployeeID
-			WHERE rd.id_ass_instance = @Ext_id_ass_instance
-			AND (rd.id_emp_assessor = @ExtCurrentUserID OR rd.id_emp_assessor_2 = @ExtCurrentUserID OR rd.id_emp_assessor_3 = @ExtCurrentUserID OR fs.AssignedToContactIDForSignature = @CurUser)
-			AND dc.DepartmentID not in (select ID from SS_GetViewableDepartmentList(@CurUser,6,1))
-			UNION
-			SELECT c.ContactID, 'MyEmployee' As ContactType
-			FROM AC_Department_Contacts dc
-			JOIN AC_Contacts c on dc.ContactID = c.ContactID
-			JOIN SS_Employee e on e.ContactID = c.ContactID
-			CROSS APPLY SS_GetUserPermsforDeptEmployees(@CurUser,@DepartmentID,getdate()) up
-			WHERE getdate() between dc.Startdate and isnull(dc.Enddate, '2049-12-31')
-			and getdate() <= isnull(e.FRDATE, '2049-12-31')
-			AND (@DepartmentID is null OR dc.DepartmentID in ( select ID from SS_GetDeptListFromNodeDown(@DepartmentID)))
-			AND up.Rights <> 0 AND up.EmployeeID = c.ContactID
-			UNION
-			--DESS-115639 HR per Node
-			SELECT c.ContactID, 'HRPerNode' As ContactType
-			FROM AC_Department_Contacts dc
-			JOIN AC_Contacts c on dc.ContactID = c.ContactID
-			JOIN SS_Employee e on e.ContactID = c.ContactID
-			CROSS APPLY SS_GetViewableDepartmentListPerNodePerRole (@CurUser,@AssessmentEditorRole) dln
-			WHERE getdate() between dc.Startdate and isnull(dc.Enddate, '2049-12-31')
-			and getdate() <= isnull(e.FRDATE, '2049-12-31')
-			AND dln.ID = dc.DepartmentID
-			AND (@DepartmentID is null OR dc.DepartmentID in ( select ID from SS_GetDeptListFromNodeDown(@DepartmentID)))
-			--AND (dc.DepartmentID in (select ID from SS_GetViewableDepartmentListPerNodePerRole (@CurUser,@AssessmentEditorRole)) AND @DepartmentID in (select ID from SS_GetViewableDepartmentListPerNodePerRole (@CurUser,@AssessmentEditorRole)))
-			UNION 
-			--GoalSettings
-			SELECT c.ContactID, 'GoalSetting' As ContactType
-			FROM SS_HRM_ASS_INSTANCE_OBJECTIVES_PARTICIPANTS obp
-			JOIN SS_HRM_ASS_INSTANCES ai on ai.Ext_id_ass_instance = obp.id_ass_instance
-			LEFT JOIN SS_HRM_ASS_INSTANCE_OBJECTIVES_EMP obemp on obemp.id_ass_instance = obp.id_ass_instance AND obemp.id_emp = obp.id_emp AND obemp.StatusID not in (2,12,22)
-			JOIN AC_All_EmpIDS ae on obp.id_emp = ae.EMP_ID
-			JOIN AC_Contacts c on ae.ContactID = c.ContactID
-			WHERE obp.id_ass_instance = @Ext_id_ass_instance
-			AND obp.StatusID not in (2,12,22) 
-			AND isnull(ai.GoalSettingMode,1) = 2 AND isnull(ai.CurrentGoalSettingStatus,0) = 1
-			AND (obp.SettingSubmitterContactID is not null AND obp.SettingSubmitterContactID = @CurUser
-				OR obp.SettingSubmitterContactID is null AND @CurUser in (select cm.RegularManager 
-									  from AC_Department_Contacts dc 
-									  CROSS APPLY SS_ContactCurrentManagerTreeUp (dc.ContactID,dc.DepartmentID) cm 
-									  where dc.ContactID = c.ContactID AND CONVERT(date,getdate()) between dc.Startdate and isnull(dc.Enddate, '2049-12-31') AND cm.ManagerLevel = 1))
-			UNION 
-			--Goal Achievement
-			SELECT c.ContactID, 'GoalAchievement' As ContactType
-			FROM SS_HRM_ASS_INSTANCE_OBJECTIVES_PARTICIPANTS obp
-			JOIN SS_HRM_ASS_INSTANCES ai on ai.Ext_id_ass_instance = obp.id_ass_instance
-			LEFT JOIN SS_HRM_ASS_INSTANCE_OBJECTIVES_EMP obemp on obemp.id_ass_instance = obp.id_ass_instance AND obemp.id_emp = obp.id_emp AND obemp.StatusID not in (2,12,22)
-			JOIN AC_All_EmpIDS ae on obp.id_emp = ae.EMP_ID
-			JOIN AC_Contacts c on ae.ContactID = c.ContactID
-			WHERE obp.id_ass_instance = @Ext_id_ass_instance
-			AND obp.StatusID not in (2,12,22) 
-			AND isnull(ai.GoalSettingMode,1) = 2 AND isnull(ai.CurrentGoalSettingStatus,0) = 2
-			AND (obp.AchievementSubmitterContactID is not null AND obp.AchievementSubmitterContactID = @CurUser
-				OR obp.AchievementSubmitterContactID is null AND @CurUser in (select cm.RegularManager 
-									  from AC_Department_Contacts dc 
-									  CROSS APPLY SS_ContactCurrentManagerTreeUp (dc.ContactID,dc.DepartmentID) cm 
-									  where dc.ContactID = c.ContactID AND CONVERT(date,getdate()) between dc.Startdate and isnull(dc.Enddate, '2049-12-31') AND cm.ManagerLevel = 1))
-		)
-		
-		INSERT @RetTbl
-		SELECT distinct acon.ContactID AS ID
-		,ISNULL(lo_last.VALUE, acon.Name) + ' ' + coalesce(lo_first.VALUE, acon.FirstName, '') AS Descr
-		,NULL AS IsOwnAssessment
-		,NULL AS IsComplete
-		FROM AssessedEmployees t
-		JOIN AC_Contacts acon ON acon.ContactID = t.ContactID
-		LEFT JOIN L_Object lo_last on lo_last.ID_TABLE = acon.ContactID AND lo_last.TABLE_NAME = 'AC_Contacts' AND lo_last.FieldName = 'LastName' AND lo_last.ID_LANGUAGES = @CurLanguageID
-		LEFT JOIN L_Object lo_first on lo_first.ID_TABLE = acon.ContactID AND lo_first.TABLE_NAME = 'AC_Contacts' AND lo_first.FieldName = 'FirstName' AND lo_first.ID_LANGUAGES = @CurLanguageID
-
-		RETURN
-	END	
-
-	RETURN
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbIncreasesTaxDeductible' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbIncreasesTaxDeductible', 2, N'Increases tax deductible',2)
 END
 GO
-IF @@ERROR<>0 AND @@TRANCOUNT>0 ROLLBACK TRANSACTION
-GO
-IF @@TRANCOUNT=0 BEGIN INSERT INTO #tmpErrors (Error) SELECT 1 BEGIN TRANSACTION END
-GO
-PRINT N'Adding foreign keys to [dbo].[SS_Application_EmployeeChildren]'
-GO
-IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE object_id = OBJECT_ID(N'[dbo].[FK_SS_Application_EmployeeChildren$ApplicationID_ref_SS_Applications]', 'F') AND parent_object_id = OBJECT_ID(N'[dbo].[SS_Application_EmployeeChildren]', 'U'))
-ALTER TABLE [dbo].[SS_Application_EmployeeChildren] ADD CONSTRAINT [FK_SS_Application_EmployeeChildren$ApplicationID_ref_SS_Applications] FOREIGN KEY ([ApplicationID]) REFERENCES [dbo].[SS_Applications] ([ID])
-IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE object_id = OBJECT_ID(N'[dbo].[FK_SS_Application_EmployeeChildren$GenderID_ref_L_Genders]', 'F') AND parent_object_id = OBJECT_ID(N'[dbo].[SS_Application_EmployeeChildren]', 'U'))
-ALTER TABLE [dbo].[SS_Application_EmployeeChildren] ADD CONSTRAINT [FK_SS_Application_EmployeeChildren$GenderID_ref_L_Genders] FOREIGN KEY ([GenderID]) REFERENCES [dbo].[L_Genders] ([ID])
-GO
-IF @@ERROR<>0 AND @@TRANCOUNT>0 ROLLBACK TRANSACTION
-GO
-IF @@TRANCOUNT=0 BEGIN INSERT INTO #tmpErrors (Error) SELECT 1 BEGIN TRANSACTION END
-GO
-IF EXISTS (SELECT * FROM #tmpErrors) ROLLBACK TRANSACTION
-GO
-IF @@TRANCOUNT>0 BEGIN
-PRINT 'The database update succeeded'
-COMMIT TRANSACTION
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbRowStatus' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbRowStatus', 1, N'Κατάσταση Εγγραφής',2)
 END
-ELSE PRINT 'The database update failed'
 GO
-DROP TABLE #tmpErrors
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbRowStatus' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbRowStatus', 2, N'Row Status',2)
+END
+GO
+
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbFamilyStatusApplication' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbFamilyStatusApplication', 1, N'Αίτηση Οικογενειακής Κατάστασης',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbFamilyStatusApplication' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbFamilyStatusApplication', 2, N'Application for Family Status',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbChildForm' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbChildForm', 1, N'Στοιχεία τέκνων',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbChildForm' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbChildForm', 2, N'Children information',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbExistingRowNoChanges' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbExistingRowNoChanges', 1, N'Χωρίς Αλλαγές',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbExistingRowNoChanges' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbExistingRowNoChanges', 2, N'Existing Row, No Changes',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbExistingRowChangesRequested' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbExistingRowChangesRequested', 1, N'Αιτούμενες αλλαγές',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbExistingRowChangesRequested' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbExistingRowChangesRequested', 2, N'Existing Row, Changes Requested',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbNewRow' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbNewRow', 1, N'Νέα εγγραφή',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbNewRow' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbNewRow', 2, N'New Row',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbRequiredChildName' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbRequiredChildName', 1, N'To πεδίο Όνομα είναι υποχρεωτικό. Εφόσον δεν έχει γίνει ακόμα ονοματοδοσία, θα πρέπει να καταχωρηθεί ως «ΑΒΑΠΤΙΣΤΟ»',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbRequiredChildName' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbRequiredChildName', 2, N'Child name filed is mandatory. Please submit «Newborn» if no name is given yet.',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbAnnIsGlobal' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbAnnIsGlobal', 1, N'Ορατό σε όλους',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbAnnIsGlobal' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbAnnIsGlobal', 2, N'Visible to all',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbAnnIsGlobalEdit' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbAnnIsGlobalEdit', 1, N'Ορατό σε όλους',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbAnnIsGlobalEdit' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbAnnIsGlobalEdit', 2, N'Visible to all',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrences_Confirm' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrences_Confirm', 1, N'Πρόκειται να διαγράψετε μία ή περισσότερες εγγραφές',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrences_Confirm' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrences_Confirm', 2, N'You are about to delete one or more records',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesFrom' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesFrom', 1, N'Από',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesFrom' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesFrom', 2, N'From',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesTill' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesTill', 1, N'Έως',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesTill' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesTill', 2, N'Till',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesCarPlate' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesCarPlate', 1, N'Πινακίδα',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesCarPlate' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesCarPlate', 2, N'Plate',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesCarColor' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesCarColor', 1, N'Χρώμα',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesCarColor' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesCarColor', 2, N'Color',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesCarModel' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesCarModel', 1, N'Μοντέλο',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesCarModel' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesCarModel', 2, N'Model',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesCarComments' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesCarComments', 1, N'Σχόλια',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesCarComments' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesCarComments', 2, N'Comments',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesEmployees' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesEmployees', 1, N'Εργαζόμενοι',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesEmployees' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesEmployees', 2, N'Employees',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesApplyFilter' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesApplyFilter', 1, N'Εφαρμογή',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesApplyFilter' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesApplyFilter', 2, N'Apply',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesTabTableTitle' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesTabTableTitle', 1, N'Συμβάντα',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesTabTableTitle' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesTabTableTitle', 2, N'Occurrences',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesOpenAddModal' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesOpenAddModal', 1, N'Προσθήκη',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesOpenAddModal' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesOpenAddModal', 2, N'Add',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesOpenEditModal' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesOpenEditModal', 1, N'Επεξεργασία',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesOpenEditModal' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesOpenEditModal', 2, N'Edit',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesOpenDeleteModal' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesOpenDeleteModal', 1, N'Διαγραφή',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesOpenDeleteModal' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesOpenDeleteModal', 2, N'Delete',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGroup' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGroup', 1, N'Πύλη',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGroup' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGroup', 2, N'Gate',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesDate' AND [Language] = 1)	
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesDate', 1, N'Ημερομηνία',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesDate' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesDate', 2, N'Date',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbExcludedDayExists' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbExcludedDayExists', 1, N'Δεν μπορείτε να προχωρήσετε στην εκτύπωση γιατί υπάρχουν κλειδωμένες ημερομηνίες',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbExcludedDayExists' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbExcludedDayExists', 2, N'You are not permitted to print because the schedule includes locked days',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbAssignShiftsBasicPrintTitle' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbAssignShiftsBasicPrintTitle', 1, N'Εκτύπωση',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbAssignShiftsBasicPrintTitle' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbAssignShiftsBasicPrintTitle', 2, N'Print',2)
+END
+GO
+
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'Hidden_lbFinalizedDaysExist_2' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('Hidden_lbFinalizedDaysExist_2', 1, N'Προσοχή! Σε περίπτωση που δεν υπάρχει ανάθεση για μία ημέρα, αυτή θα οριστικοποιηθεί ως κενή πληροφορία.',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'Hidden_lbFinalizedDaysExist_2' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('Hidden_lbFinalizedDaysExist_2', 2, N'Warning! In case of an empty cell, this will be finalized too',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'Hidden_lbFinalizedDaysExist_3' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('Hidden_lbFinalizedDaysExist_3', 1, N'Προσοχή! Οι αλλαγές που δεν έχουν αποθηκευτεί, θα χαθούν και δεν θα οριστικοποιηθούν.',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'Hidden_lbFinalizedDaysExist_3' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('Hidden_lbFinalizedDaysExist_3', 2, N'Warning! Unsaved changes will be lost and will not be finalized.',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrences' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrences', 1, N'Καταχώρηση Συμβάντων',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrences' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrences', 2, N'Occurrences',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridID' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridID', 1, N'ID',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridID' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridID', 2, N'ID',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridCreateDate' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridCreateDate', 1, N'Ημερομηνία',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridCreateDate' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridCreateDate', 2, N'Date',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridGroupName' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridGroupName', 1, N'Πύλη',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridGroupName' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridGroupName', 2, N'Gate',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridCarPlate' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridCarPlate', 1, N'Πινακίδα',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridCarPlate' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridCarPlate', 2, N'Plate',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridCarModel' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridCarModel', 1, N'Μοντέλο',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridCarModel' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridCarModel', 2, N'Model',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridCarColor' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridCarColor', 1, N'Χρώμα',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridCarColor' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridCarColor', 2, N'Color',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridDescr' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridDescr', 1, N'Σχόλια',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridDescr' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridDescr', 2, N'Comments',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridCreatedBy' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridCreatedBy', 1, N'Φύλακας',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridCreatedBy' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridCreatedBy', 2, N'Guard',2)
+END
+GO
+
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbApplicationCost' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbApplicationCost', 1, N'Κέντρο Κόστους',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbApplicationCost' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbApplicationCost', 2, N'Cost center',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbApplicationProject' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbApplicationProject', 1, N'Αριθμός Έργου',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbApplicationProject' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbApplicationProject', 2, N'Project Number',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbApplicationDestination' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbApplicationDestination', 1, N'Προορισμός',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbApplicationDestination' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbApplicationDestination', 2, N'Destination',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbFullNameOfTrainee' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbFullNameOfTrainee', 1, N'Ονοματεπώνυμο Εκπαιδευομένου',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbFullNameOfTrainee' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbFullNameOfTrainee', 2, N'Trainee Full name',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingEducation' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingEducation', 1, N'Αντικείμενο Εκπαίδευσης',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingEducation' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingEducation', 2, N'Training Education',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingDuration' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingDuration', 1, N'Διάρκεια Εκπαίδευσης (Ώρες)',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingDuration' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingDuration', 2, N'Training Duration (Hours)',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbDateOfEducation' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbDateOfEducation', 1, N'Ημερομηνία Υλοποίησης Εκπαίδευσης',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbDateOfEducation' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbDateOfEducation', 2, N'Date of Education',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingLocation' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingLocation', 1, N'Τόπος Διεξαγωγής',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingLocation' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingLocation', 2, N'Training Location',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbRecordUpdated' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbRecordUpdated', 1, N'Η εγγραφή ενημερώθηκε επιτυχώς',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbRecordUpdated' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbRecordUpdated', 2, N'Record updated successfully',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingEmployeeModalTitle' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingEmployeeModalTitle', 1, N'Εκπαίδευση υπαλλήλων',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingEmployeeModalTitle' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingEmployeeModalTitle', 2, N'Training Employee',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbAdministrationDepartment' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbAdministrationDepartment', 1, N'Διεύθυνση - Τμήμα',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbAdministrationDepartment' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbAdministrationDepartment', 2, N'Administration - Department',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbEmployeeFullName' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbEmployeeFullName', 1, N'Ονοματεπώνυμο Εργαζομένου',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbEmployeeFullName' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbEmployeeFullName', 2, N'Employee Full name',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingDurationHours' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingDurationHours', 1, N'Διάρκεια Εκπαίδευσης (Ώρες)',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingDurationHours' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingDurationHours', 2, N'Training Duration (Hours)',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingEmployees' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingEmployees', 1, N'Αίτηση για Εκπαίδευση',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingEmployees' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingEmployees', 2, N'Request for Training',2)
+END
+GO
+
+------Menu
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'X_Menu.FamilyStatus' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('X_Menu.FamilyStatus', 1, N'Αίτηση Οικογενειακής Κατάστασης',1)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'X_Menu.FamilyStatus' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('X_Menu.FamilyStatus', 2, N'Application for Family Status',1)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'X_Menu.Occurrences' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('X_Menu.Occurrences', 1, N'Καταχώρηση Συμβάντων',1)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'X_Menu.Occurrences' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('X_Menu.Occurrences', 2, N'Occurrences',1)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'X_Menu.TrainingEmployees' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('X_Menu.TrainingEmployees', 1, N'Αίτηση για Εκπαίδευση',1)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'X_Menu.TrainingEmployees' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('X_Menu.TrainingEmployees', 2, N'Request for Training',1)
+END
+GO
+
+UPDATE X_StaticTranslations_FactoryDefaults set TranslatedText = 'Use applicant''s node' WHERE CD = 'lbUseEmployeeDepartmentForDeputyManager' AND [Language] = 2
+GO
+
+UPDATE X_StaticTranslations_FactoryDefaults set TranslatedText = 'Δεν μπορείτε να εκτυπώσετε πρόγραμμα εργασίας γιατί υπάρχουν μη οριστικοποιημένες ημέρες. Θέλετε να οριστικοποιηθούν με την υπάρχουσα ανάθεση;' WHERE CD = 'Hidden_lbFinalizedDaysExist' AND [Language] = 1
+GO
+UPDATE X_StaticTranslations_FactoryDefaults set TranslatedText = 'You can''t print the schedule because there are unfinalized days. Do you want to finalize them with the existing assignment?' WHERE CD = 'Hidden_lbFinalizedDaysExist' AND [Language] = 2
+GO
+
+
+------L_Object
+IF NOT EXISTS (select 1 from L_Object_FactoryDefaults where TABLE_NAME = 'SS_ApplicationTypes' AND ID_TABLE = 29 AND ID_LANGUAGES = 1 )
+BEGIN
+	INSERT INTO L_Object_FactoryDefaults  ([ID_TABLE], [ID_LANGUAGES], [DATA_TYPE], [VALUE], [TABLE_NAME]) VALUES (29,1,'TEXT', 'Αίτηση Οικογενειακής Κατάστασης', 'SS_ApplicationTypes')
+END
+GO
+IF NOT EXISTS (select 1 from L_Object_FactoryDefaults where TABLE_NAME = 'SS_ApplicationTypes' AND ID_TABLE = 29 AND ID_LANGUAGES = 2 )
+BEGIN
+	INSERT INTO L_Object_FactoryDefaults  ([ID_TABLE], [ID_LANGUAGES], [DATA_TYPE], [VALUE], [TABLE_NAME]) VALUES (29,2,'TEXT', 'Application for Family Status', 'SS_ApplicationTypes')
+END
+GO
+
+IF NOT EXISTS (select 1 from L_Object_FactoryDefaults where TABLE_NAME = 'SS_ApplicationTypes' AND ID_TABLE = 30 AND ID_LANGUAGES = 1 )
+BEGIN
+	INSERT INTO L_Object_FactoryDefaults  ([ID_TABLE], [ID_LANGUAGES], [DATA_TYPE], [VALUE], [TABLE_NAME]) VALUES (30,1,'TEXT', 'Αίτηση για Εκπαίδευση', 'SS_ApplicationTypes')
+END
+GO
+IF NOT EXISTS (select 1 from L_Object_FactoryDefaults where TABLE_NAME = 'SS_ApplicationTypes' AND ID_TABLE = 30 AND ID_LANGUAGES = 2 )
+BEGIN
+	INSERT INTO L_Object_FactoryDefaults  ([ID_TABLE], [ID_LANGUAGES], [DATA_TYPE], [VALUE], [TABLE_NAME]) VALUES (30,2,'TEXT', 'Request for Training', 'SS_ApplicationTypes')
+END
+GO
+
+PRINT('------------ Summary ------------')
+GO
+UPDATE st
+SET st.TranslatedText = fd.TranslatedText
+FROM X_StaticTranslations_FactoryDefaults fd
+LEFT JOIN X_StaticTranslations st on fd.Cd = st.Cd and fd.[Language] = st.LanguageID
+WHERE fd.TranslatedText <> st.TranslatedText and isnull(st.NoUpdate,0) = 0;
+GO
+INSERT INTO X_StaticTranslations (Cd, LanguageID, Category, TranslatedText)
+SELECT fd.Cd, fd.Language, fd.Category,fd.TranslatedText
+FROM X_StaticTranslations_FactoryDefaults fd
+LEFT JOIN X_StaticTranslations st on fd.Cd = st.Cd and fd.[Language] = st.LanguageID
+WHERE st.Cd is null;
+GO
+UPDATE o
+SET o.VALUE = fd.VALUE
+FROM L_Object_FactoryDefaults fd
+LEFT JOIN L_Object o on o.ID_TABLE =fd.ID_TABLE and o.ID_LANGUAGES = fd.ID_LANGUAGES and o.TABLE_NAME = fd.TABLE_NAME
+WHERE o.VALUE <> fd.VALUE and isnull(o.NO_UPDATE,0) = 0;
+GO
+INSERT INTO L_Object (ID_TABLE, ID_LANGUAGES, DATA_TYPE,VALUE,TABLE_NAME)
+SELECT fd.ID_TABLE, fd.ID_LANGUAGES, fd.DATA_TYPE, fd.VALUE, fd.TABLE_NAME
+FROM L_Object_FactoryDefaults fd
+LEFT JOIN L_Object l on l.ID_TABLE = fd.ID_TABLE and l.ID_LANGUAGES = fd.ID_LANGUAGES and l.TABLE_NAME = fd.TABLE_NAME
+WHERE l.ID_TABLE is null AND l.VALUE is null;
 GO

@@ -246,8 +246,7 @@ namespace CreateScripts
                             int lengthID = idCommaIndex - startIdIndex;
                             string idValue =  s.Substring(startIdIndex, lengthID);
 
-                            int varControlIDIndex = s.IndexOf(',', idCommaIndex + 1);
-                            string ControlID = s.Substring(idCommaIndex + 1, varControlIDIndex - idCommaIndex - 1);
+                            
 
                             int varKeyIndexStart = s.IndexOf("'");
                             int varKeyIndexEnd = s.IndexOf("'" , varKeyIndexStart + 1);
@@ -256,7 +255,11 @@ namespace CreateScripts
                             if (!tableName.Contains("X_UIControl_Settings"))
                                 insertStatement.AppendLine($"IF NOT EXISTS (select 1 from {tableName} where [ID] = {idValue})");
                             else
+                            {
+                                int varControlIDIndex = s.IndexOf(',', idCommaIndex + 1);
+                                string ControlID = s.Substring(idCommaIndex + 1, varControlIDIndex - idCommaIndex - 1);
                                 insertStatement.AppendLine($"IF NOT EXISTS (select 1 from {tableName} where [ControlID] ={ControlID} AND [varKey] = '{varkey}' )");
+                            }   
                             insertStatement.AppendLine("BEGIN");
                             insertStatement.AppendLine("\t"+s);
                             insertStatement.AppendLine("END");
@@ -268,6 +271,8 @@ namespace CreateScripts
                         coreFile.AppendLine(s.Trim());
                     }
                 }
+
+                coreFile.AppendLine($"PRINT 'Core Scripts Update'");
                 Console.WriteLine("Core File Created");
             }
             else
@@ -305,8 +310,8 @@ namespace CreateScripts
                 {
                     string s = "";
                     while ((s = sr.ReadLine()) != null)
-                    {
-                        customFile.AppendLine(s.Trim());
+                    {   
+                        customFile.AppendLine("\t" + s.Trim());
                     }
                 }
                 Console.WriteLine("Custom File Created");
