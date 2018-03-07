@@ -18,6 +18,8 @@ INSERT INTO [dbo].[X_TablesForDynamicTranslation] ([ID], [TABLE_NAME], [Descr], 
 INSERT INTO [dbo].[L_MaritalStatus] ([ID], [Descr], [OrderFld]) VALUES (5, N'Σύμφωνο Συμβίωσης', 6)
 INSERT INTO [dbo].[XU_UserScenarios] ([ID], [Descr]) VALUES (18, N'Submit Occurences')
 INSERT INTO [dbo].[X_UIControls] ([ID], [Cd], [Descr]) VALUES (156, N'ucOccurrences', N'Occurrences')
+INSERT INTO [dbo].[X_UIControl_Settings] ([ID], [ControlID], [varKey], [varValue]) VALUES (101, 24, N'FamilyStatusShowIncreasesTaxDeductible', N'1')
+INSERT INTO [dbo].[X_UIControl_Settings] ([ID], [ControlID], [varKey], [varValue]) VALUES (100, 24, N'FamilyStatusShowEmployeeDependent', N'1')
 UPDATE [dbo].[XP_Roles] SET [Cd]=N'rl_EmployeeInfoSubmitter', [Dscr]=N'Employee Info Submitter' WHERE [Id]=1012
 COMMIT TRANSACTION
 GO

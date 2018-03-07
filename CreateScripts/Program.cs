@@ -157,10 +157,9 @@ namespace CreateScripts
                 {
                     string s = "";
                     while ((s = sr.ReadLine()) != null)
-                    {
-                        schemaFile.AppendLine(s.Trim());
-                    }
-                }               
+                        schemaFile.AppendLine(s);
+                }
+                
                 Console.WriteLine("Schema File Created");
             }
             else
@@ -236,29 +235,32 @@ namespace CreateScripts
                         string ifNotExists = string.Empty;
                         if (s.Contains("INSERT"))
                         {
+                            //! Find Table Name
                             int startIndex = s.IndexOf('.') + 1;
-                            int endIndex = s.IndexOf('(');
-                            int length = endIndex - startIndex;
-                            string tableName = s.Substring(startIndex, length);
+                            int endIndex = s.IndexOf(']' , startIndex);
+                            string tableName = s.Substring(startIndex, (endIndex - startIndex) + 1);
 
+                            //Find ID Column
                             int startIdIndex = s.LastIndexOf('(') + 1;
                             int idCommaIndex = s.IndexOf(',', startIdIndex);
-                            int lengthID = idCommaIndex - startIdIndex;
-                            string idValue =  s.Substring(startIdIndex, lengthID);
+                            string idValue =  s.Substring(startIdIndex, (idCommaIndex - startIdIndex));
 
+                            //! Find ID Value
+                            int indexOfValueString = s.IndexOf("VALUES");
+                            int indexOfFirstSemiCol = s.IndexOf('(', indexOfValueString) + 1;
+                            int indexofFirstCommaValue = s.IndexOf(',', indexOfFirstSemiCol);
+                            idValue = s.Substring(indexOfFirstSemiCol, (indexofFirstCommaValue - indexOfFirstSemiCol));
                             
-
-                            int varKeyIndexStart = s.IndexOf("'");
-                            int varKeyIndexEnd = s.IndexOf("'" , varKeyIndexStart + 1);
-                            string varkey = s.Substring(varKeyIndexStart + 1, varKeyIndexEnd - varKeyIndexStart - 1);
-
                             if (!tableName.Contains("X_UIControl_Settings"))
                                 insertStatement.AppendLine($"IF NOT EXISTS (select 1 from {tableName} where [ID] = {idValue})");
                             else
-                            {
-                                int varControlIDIndex = s.IndexOf(',', idCommaIndex + 1);
-                                string ControlID = s.Substring(idCommaIndex + 1, varControlIDIndex - idCommaIndex - 1);
-                                insertStatement.AppendLine($"IF NOT EXISTS (select 1 from {tableName} where [ControlID] ={ControlID} AND [varKey] = '{varkey}' )");
+                            {   
+                                int controlKeyValue = s.IndexOf(",", indexofFirstCommaValue + 1);
+                                string ControlID = s.Substring(indexofFirstCommaValue + 1, (controlKeyValue - indexofFirstCommaValue) - 1);
+
+                                int varControlIDIndex = s.IndexOf(',', controlKeyValue + 1);
+                                string varkey = s.Substring(controlKeyValue + 1, (varControlIDIndex - controlKeyValue) -1 );
+                                insertStatement.AppendLine($"IF NOT EXISTS (select 1 from {tableName} where [ControlID] ={ControlID} AND [varKey] = {varkey} )");
                             }   
                             insertStatement.AppendLine("BEGIN");
                             insertStatement.AppendLine("\t"+s);
@@ -310,8 +312,11 @@ namespace CreateScripts
                 {
                     string s = "";
                     while ((s = sr.ReadLine()) != null)
-                    {   
-                        customFile.AppendLine("\t" + s.Trim());
+                    {
+                        if (s.Contains("INSERT"))
+                            customFile.AppendLine("\t" + s.Trim());
+                        else
+                            customFile.AppendLine(s.Trim());
                     }
                 }
                 Console.WriteLine("Custom File Created");
