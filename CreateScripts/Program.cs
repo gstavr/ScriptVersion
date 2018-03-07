@@ -239,25 +239,21 @@ namespace CreateScripts
                             int startIndex = s.IndexOf('.') + 1;
                             int endIndex = s.IndexOf(']' , startIndex);
                             string tableName = s.Substring(startIndex, (endIndex - startIndex) + 1);
-
-                            //Find ID Column
-                            int startIdIndex = s.LastIndexOf('(') + 1;
-                            int idCommaIndex = s.IndexOf(',', startIdIndex);
-                            string idValue =  s.Substring(startIdIndex, (idCommaIndex - startIdIndex));
-
+                            
                             //! Find ID Value
                             int indexOfValueString = s.IndexOf("VALUES");
                             int indexOfFirstSemiCol = s.IndexOf('(', indexOfValueString) + 1;
                             int indexofFirstCommaValue = s.IndexOf(',', indexOfFirstSemiCol);
-                            idValue = s.Substring(indexOfFirstSemiCol, (indexofFirstCommaValue - indexOfFirstSemiCol));
+                            string idValue = s.Substring(indexOfFirstSemiCol, (indexofFirstCommaValue - indexOfFirstSemiCol));
                             
                             if (!tableName.Contains("X_UIControl_Settings"))
                                 insertStatement.AppendLine($"IF NOT EXISTS (select 1 from {tableName} where [ID] = {idValue})");
                             else
                             {   
+                                //! Find ControlID
                                 int controlKeyValue = s.IndexOf(",", indexofFirstCommaValue + 1);
                                 string ControlID = s.Substring(indexofFirstCommaValue + 1, (controlKeyValue - indexofFirstCommaValue) - 1);
-
+                                //! Find VarKey Value
                                 int varControlIDIndex = s.IndexOf(',', controlKeyValue + 1);
                                 string varkey = s.Substring(controlKeyValue + 1, (varControlIDIndex - controlKeyValue) -1 );
                                 insertStatement.AppendLine($"IF NOT EXISTS (select 1 from {tableName} where [ControlID] ={ControlID} AND [varKey] = {varkey} )");
@@ -268,12 +264,9 @@ namespace CreateScripts
                             insertStatement.AppendLine("GO");
                             s = insertStatement.ToString();
                         }
-                        
-
                         coreFile.AppendLine(s.Trim());
                     }
                 }
-
                 coreFile.AppendLine($"PRINT 'Core Scripts Update'");
                 Console.WriteLine("Core File Created");
             }
