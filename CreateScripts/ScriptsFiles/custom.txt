@@ -1,654 +1,299 @@
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbIsEmployeeDependent' AND [Language] = 1) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbToken_Request' AND [Language] = 1) 
 BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbIsEmployeeDependent', 1, N'Βαρύνει τον εργαζόμενο',2)
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbToken_Request', 1, N'link �������',2)
 END
 GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbIsEmployeeDependent' AND [Language] = 2) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbToken_Request' AND [Language] = 2) 
 BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbIsEmployeeDependent', 2, N'Is employee dependent',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbIncreasesTaxDeductible' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbIncreasesTaxDeductible', 1, N'Αυξάνει το αφορολόγητο του εργαζόμενου',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbIncreasesTaxDeductible' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbIncreasesTaxDeductible', 2, N'Increases tax deductible',2)
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbToken_Request', 2, N'Application link',2)
 END
 GO
 
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbRowStatus' AND [Language] = 1) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbToken_CurAppID' AND [Language] = 1) 
 BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbRowStatus', 1, N'Κατάσταση Εγγραφής',2)
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbToken_CurAppID', 1, N'ID �������',2)
 END
 GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbRowStatus' AND [Language] = 2) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbToken_CurAppID' AND [Language] = 2) 
 BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbRowStatus', 2, N'Row Status',2)
-END
-GO
-
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbFamilyStatusApplication' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbFamilyStatusApplication', 1, N'Αίτηση Οικογενειακής Κατάστασης',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbFamilyStatusApplication' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbFamilyStatusApplication', 2, N'Application for Family Status',2)
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbToken_CurAppID', 2, N'Application ID',2)
 END
 GO
 
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbChildForm' AND [Language] = 1) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbToken_EmployeeName' AND [Language] = 1) 
 BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbChildForm', 1, N'Στοιχεία τέκνων',2)
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbToken_EmployeeName', 1, N'������������� �����������',2)
 END
 GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbChildForm' AND [Language] = 2) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbToken_EmployeeName' AND [Language] = 2) 
 BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbChildForm', 2, N'Children information',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbExistingRowNoChanges' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbExistingRowNoChanges', 1, N'Χωρίς Αλλαγές',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbExistingRowNoChanges' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbExistingRowNoChanges', 2, N'Existing Row, No Changes',2)
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbToken_EmployeeName', 2, N'Employee Name',2)
 END
 GO
 
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbExistingRowChangesRequested' AND [Language] = 1) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbToken_CurAppEmpName' AND [Language] = 1) 
 BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbExistingRowChangesRequested', 1, N'Αιτούμενες αλλαγές',2)
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbToken_CurAppEmpName', 1, N'������������� �����������',2)
 END
 GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbExistingRowChangesRequested' AND [Language] = 2) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbToken_CurAppEmpName' AND [Language] = 2) 
 BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbExistingRowChangesRequested', 2, N'Existing Row, Changes Requested',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbNewRow' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbNewRow', 1, N'Νέα εγγραφή',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbNewRow' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbNewRow', 2, N'New Row',2)
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbToken_CurAppEmpName', 2, N'Employee Name',2)
 END
 GO
 
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbRequiredChildName' AND [Language] = 1) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbToken_ApplicationType' AND [Language] = 1) 
 BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbRequiredChildName', 1, N'To πεδίο Όνομα είναι υποχρεωτικό. Εφόσον δεν έχει γίνει ακόμα ονοματοδοσία, θα πρέπει να καταχωρηθεί ως «ΑΒΑΠΤΙΣΤΟ»',2)
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbToken_ApplicationType', 1, N'����� �������',2)
 END
 GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbRequiredChildName' AND [Language] = 2) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbToken_ApplicationType' AND [Language] = 2) 
 BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbRequiredChildName', 2, N'Child name filed is mandatory. Please submit «Newborn» if no name is given yet.',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbAnnIsGlobal' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbAnnIsGlobal', 1, N'Ορατό σε όλους',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbAnnIsGlobal' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbAnnIsGlobal', 2, N'Visible to all',2)
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbToken_ApplicationType', 2, N'Application Type',2)
 END
 GO
 
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbAnnIsGlobalEdit' AND [Language] = 1) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbToken_CurAppType' AND [Language] = 1) 
 BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbAnnIsGlobalEdit', 1, N'Ορατό σε όλους',2)
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbToken_CurAppType', 1, N'����� �������',2)
 END
 GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbAnnIsGlobalEdit' AND [Language] = 2) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbToken_CurAppType' AND [Language] = 2) 
 BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbAnnIsGlobalEdit', 2, N'Visible to all',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrences_Confirm' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrences_Confirm', 1, N'Πρόκειται να διαγράψετε μία ή περισσότερες εγγραφές',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrences_Confirm' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrences_Confirm', 2, N'You are about to delete one or more records',2)
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbToken_CurAppType', 2, N'Application Type',2)
 END
 GO
 
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesFrom' AND [Language] = 1) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbToken_CurAppStart' AND [Language] = 1) 
 BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesFrom', 1, N'Από',2)
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbToken_CurAppStart', 1, N'���������� �������',2)
 END
 GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesFrom' AND [Language] = 2) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbToken_CurAppStart' AND [Language] = 2) 
 BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesFrom', 2, N'From',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesTill' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesTill', 1, N'Έως',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesTill' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesTill', 2, N'Till',2)
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbToken_CurAppStart', 2, N'Application Start Date',2)
 END
 GO
 
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesCarPlate' AND [Language] = 1) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbToken_CurAppEnd' AND [Language] = 1) 
 BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesCarPlate', 1, N'Πινακίδα',2)
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbToken_CurAppEnd', 1, N'���������� �����',2)
 END
 GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesCarPlate' AND [Language] = 2) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbToken_CurAppEnd' AND [Language] = 2) 
 BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesCarPlate', 2, N'Plate',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesCarColor' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesCarColor', 1, N'Χρώμα',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesCarColor' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesCarColor', 2, N'Color',2)
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbToken_CurAppEnd', 2, N'Application End Date',2)
 END
 GO
 
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesCarModel' AND [Language] = 1) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbToken_CurAppTimeOffType' AND [Language] = 1) 
 BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesCarModel', 1, N'Μοντέλο',2)
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbToken_CurAppTimeOffType', 1, N'����� ������',2)
 END
 GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesCarModel' AND [Language] = 2) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbToken_CurAppTimeOffType' AND [Language] = 2) 
 BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesCarModel', 2, N'Model',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesCarComments' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesCarComments', 1, N'Σχόλια',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesCarComments' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesCarComments', 2, N'Comments',2)
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbToken_CurAppTimeOffType', 2, N'Time Off Type',2)
 END
 GO
 
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesEmployees' AND [Language] = 1) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbToken_AppComments' AND [Language] = 1) 
 BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesEmployees', 1, N'Εργαζόμενοι',2)
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbToken_AppComments', 1, N'������ �������',2)
 END
 GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesEmployees' AND [Language] = 2) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbToken_AppComments' AND [Language] = 2) 
 BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesEmployees', 2, N'Employees',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesApplyFilter' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesApplyFilter', 1, N'Εφαρμογή',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesApplyFilter' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesApplyFilter', 2, N'Apply',2)
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbToken_AppComments', 2, N'Application Comments',2)
 END
 GO
 
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesTabTableTitle' AND [Language] = 1) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbAdvancePaymentApplications' AND [Language] = 1) 
 BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesTabTableTitle', 1, N'Συμβάντα',2)
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbAdvancePaymentApplications', 1, N'�������� ������������',2)
 END
 GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesTabTableTitle' AND [Language] = 2) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbAdvancePaymentApplications' AND [Language] = 2) 
 BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesTabTableTitle', 2, N'Occurrences',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesOpenAddModal' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesOpenAddModal', 1, N'Προσθήκη',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesOpenAddModal' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesOpenAddModal', 2, N'Add',2)
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbAdvancePaymentApplications', 2, N'Advance Payment Applications',2)
 END
 GO
 
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesOpenEditModal' AND [Language] = 1) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbBalanceHours' AND [Language] = 1) 
 BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesOpenEditModal', 1, N'Επεξεργασία',2)
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbBalanceHours', 1, N'�������� ����',2)
 END
 GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesOpenEditModal' AND [Language] = 2) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbBalanceHours' AND [Language] = 2) 
 BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesOpenEditModal', 2, N'Edit',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesOpenDeleteModal' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesOpenDeleteModal', 1, N'Διαγραφή',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesOpenDeleteModal' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesOpenDeleteModal', 2, N'Delete',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGroup' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGroup', 1, N'Πύλη',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGroup' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGroup', 2, N'Gate',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesDate' AND [Language] = 1)	
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesDate', 1, N'Ημερομηνία',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesDate' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesDate', 2, N'Date',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbExcludedDayExists' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbExcludedDayExists', 1, N'Δεν μπορείτε να προχωρήσετε στην εκτύπωση γιατί υπάρχουν κλειδωμένες ημερομηνίες',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbExcludedDayExists' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbExcludedDayExists', 2, N'You are not permitted to print because the schedule includes locked days',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbAssignShiftsBasicPrintTitle' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbAssignShiftsBasicPrintTitle', 1, N'Εκτύπωση',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbAssignShiftsBasicPrintTitle' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbAssignShiftsBasicPrintTitle', 2, N'Print',2)
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbBalanceHours', 2, N'Balance (Hours)',2)
 END
 GO
 
 
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'Hidden_lbFinalizedDaysExist_2' AND [Language] = 1) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbVacationReportForAnyTimeMarketHeader' AND [Language] = 1) 
 BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('Hidden_lbFinalizedDaysExist_2', 1, N'Προσοχή! Σε περίπτωση που δεν υπάρχει ανάθεση για μία ημέρα, αυτή θα οριστικοποιηθεί ως κενή πληροφορία.',2)
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbVacationReportForAnyTimeMarketHeader', 1, N'�������� ����� ��������� ������',2)
 END
 GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'Hidden_lbFinalizedDaysExist_2' AND [Language] = 2) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbVacationReportForAnyTimeMarketHeader' AND [Language] = 2) 
 BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('Hidden_lbFinalizedDaysExist_2', 2, N'Warning! In case of an empty cell, this will be finalized too',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'Hidden_lbFinalizedDaysExist_3' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('Hidden_lbFinalizedDaysExist_3', 1, N'Προσοχή! Οι αλλαγές που δεν έχουν αποθηκευτεί, θα χαθούν και δεν θα οριστικοποιηθούν.',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'Hidden_lbFinalizedDaysExist_3' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('Hidden_lbFinalizedDaysExist_3', 2, N'Warning! Unsaved changes will be lost and will not be finalized.',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrences' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrences', 1, N'Καταχώρηση Συμβάντων',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrences' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrences', 2, N'Occurrences',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridID' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridID', 1, N'ID',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridID' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridID', 2, N'ID',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridCreateDate' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridCreateDate', 1, N'Ημερομηνία',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridCreateDate' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridCreateDate', 2, N'Date',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridGroupName' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridGroupName', 1, N'Πύλη',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridGroupName' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridGroupName', 2, N'Gate',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridCarPlate' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridCarPlate', 1, N'Πινακίδα',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridCarPlate' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridCarPlate', 2, N'Plate',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridCarModel' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridCarModel', 1, N'Μοντέλο',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridCarModel' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridCarModel', 2, N'Model',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridCarColor' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridCarColor', 1, N'Χρώμα',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridCarColor' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridCarColor', 2, N'Color',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridDescr' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridDescr', 1, N'Σχόλια',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridDescr' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridDescr', 2, N'Comments',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridCreatedBy' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridCreatedBy', 1, N'Φύλακας',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbOccurrencesGridCreatedBy' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbOccurrencesGridCreatedBy', 2, N'Guard',2)
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbVacationReportForAnyTimeMarketHeader', 2, N'TIME OFF CONFIRMATION',2)
 END
 GO
 
 
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbApplicationCost' AND [Language] = 1) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbVacationReportForAnyTimeMarketBodyA' AND [Language] = 1) 
 BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbApplicationCost', 1, N'Κέντρο Κόστους',2)
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbVacationReportForAnyTimeMarketBodyA', 1, N'���, �/� ������ �������������� /��',2)
 END
 GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbApplicationCost' AND [Language] = 2) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbVacationReportForAnyTimeMarketBodyA' AND [Language] = 2) 
 BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbApplicationCost', 2, N'Cost center',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbApplicationProject' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbApplicationProject', 1, N'Αριθμός Έργου',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbApplicationProject' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbApplicationProject', 2, N'Project Number',2)
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbVacationReportForAnyTimeMarketBodyA', 2, N'The undersigned',2)
 END
 GO
 
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbApplicationDestination' AND [Language] = 1) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbVacationReportForAnyTimeMarketBodyB' AND [Language] = 1) 
 BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbApplicationDestination', 1, N'Προορισμός',2)
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbVacationReportForAnyTimeMarketBodyB', 1, N'�� ���������',2)
 END
 GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbApplicationDestination' AND [Language] = 2) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbVacationReportForAnyTimeMarketBodyB' AND [Language] = 2) 
 BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbApplicationDestination', 2, N'Destination',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbFullNameOfTrainee' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbFullNameOfTrainee', 1, N'Ονοματεπώνυμο Εκπαιδευομένου',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbFullNameOfTrainee' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbFullNameOfTrainee', 2, N'Trainee Full name',2)
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbVacationReportForAnyTimeMarketBodyB', 2, N'with father name',2)
 END
 GO
 
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingEducation' AND [Language] = 1) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbVacationReportForAnyTimeMarketBodyC' AND [Language] = 1) 
 BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingEducation', 1, N'Αντικείμενο Εκπαίδευσης',2)
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbVacationReportForAnyTimeMarketBodyC', 1, N'��� ��������� ���� ��������',2)
 END
 GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingEducation' AND [Language] = 2) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbVacationReportForAnyTimeMarketBodyC' AND [Language] = 2) 
 BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingEducation', 2, N'Training Education',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingDuration' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingDuration', 1, N'Διάρκεια Εκπαίδευσης (Ώρες)',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingDuration' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingDuration', 2, N'Training Duration (Hours)',2)
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbVacationReportForAnyTimeMarketBodyC', 2, N'who is working in company',2)
 END
 GO
 
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbDateOfEducation' AND [Language] = 1) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbVacationReportForAnyTimeMarketBodyD' AND [Language] = 1) 
 BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbDateOfEducation', 1, N'Ημερομηνία Υλοποίησης Εκπαίδευσης',2)
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbVacationReportForAnyTimeMarketBodyD', 1, N'��� ��� ����',2)
 END
 GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbDateOfEducation' AND [Language] = 2) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbVacationReportForAnyTimeMarketBodyD' AND [Language] = 2) 
 BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbDateOfEducation', 2, N'Date of Education',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingLocation' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingLocation', 1, N'Τόπος Διεξαγωγής',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingLocation' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingLocation', 2, N'Training Location',2)
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbVacationReportForAnyTimeMarketBodyD', 2, N'in street',2)
 END
 GO
 
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbRecordUpdated' AND [Language] = 1) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbVacationReportForAnyTimeMarketBodyE' AND [Language] = 1) 
 BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbRecordUpdated', 1, N'Η εγγραφή ενημερώθηκε επιτυχώς',2)
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbVacationReportForAnyTimeMarketBodyE', 1, N'�������� ��� ����� �� �������� ������ ��� ���� ������� ����',2)
 END
 GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbRecordUpdated' AND [Language] = 2) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbVacationReportForAnyTimeMarketBodyE' AND [Language] = 2) 
 BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbRecordUpdated', 2, N'Record updated successfully',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingEmployeeModalTitle' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingEmployeeModalTitle', 1, N'Εκπαίδευση υπαλλήλων',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingEmployeeModalTitle' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingEmployeeModalTitle', 2, N'Training Employee',2)
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbVacationReportForAnyTimeMarketBodyE', 2, N'I certify that I have received  the time off I had requested on',2)
 END
 GO
 
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbAdministrationDepartment' AND [Language] = 1) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbVacationReportForAnyTimeMarketBodyF' AND [Language] = 1) 
 BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbAdministrationDepartment', 1, N'Διεύθυνση - Τμήμα',2)
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbVacationReportForAnyTimeMarketBodyF', 1, N'��� �� ����� ������������ �� ������� �������� ���',2)
 END
 GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbAdministrationDepartment' AND [Language] = 2) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbVacationReportForAnyTimeMarketBodyF' AND [Language] = 2) 
 BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbAdministrationDepartment', 2, N'Administration - Department',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbEmployeeFullName' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbEmployeeFullName', 1, N'Ονοματεπώνυμο Εργαζομένου',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbEmployeeFullName' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbEmployeeFullName', 2, N'Employee Full name',2)
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbVacationReportForAnyTimeMarketBodyF', 2, N' for the time',2)
 END
 GO
 
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingDurationHours' AND [Language] = 1) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbVacationReportForAnyTimeMarketBodyG' AND [Language] = 1) 
 BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingDurationHours', 1, N'Διάρκεια Εκπαίδευσης (Ώρες)',2)
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbVacationReportForAnyTimeMarketBodyG', 1, N'�����',2)
 END
 GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingDurationHours' AND [Language] = 2) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbVacationReportForAnyTimeMarketBodyG' AND [Language] = 2) 
 BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingDurationHours', 2, N'Training Duration (Hours)',2)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingEmployees' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingEmployees', 1, N'Αίτηση για Εκπαίδευση',2)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbTrainingEmployees' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbTrainingEmployees', 2, N'Request for Training',2)
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbVacationReportForAnyTimeMarketBodyG', 2, N'until',2)
 END
 GO
 
-------Menu
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'X_Menu.FamilyStatus' AND [Language] = 1) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbVacationReportForAnyTimeMarketSignature' AND [Language] = 1) 
 BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('X_Menu.FamilyStatus', 1, N'Αίτηση Οικογενειακής Κατάστασης',1)
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbVacationReportForAnyTimeMarketSignature', 1, N'�/� �������/����',2)
 END
 GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'X_Menu.FamilyStatus' AND [Language] = 2) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbVacationReportForAnyTimeMarketSignature' AND [Language] = 2) 
 BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('X_Menu.FamilyStatus', 2, N'Application for Family Status',1)
-END
-GO
-
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'X_Menu.Occurrences' AND [Language] = 1) 
-BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('X_Menu.Occurrences', 1, N'Καταχώρηση Συμβάντων',1)
-END
-GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'X_Menu.Occurrences' AND [Language] = 2) 
-BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('X_Menu.Occurrences', 2, N'Occurrences',1)
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbVacationReportForAnyTimeMarketSignature', 2, N'Certifier',2)
 END
 GO
 
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'X_Menu.TrainingEmployees' AND [Language] = 1) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbUserMainGroup' AND [Language] = 1) 
 BEGIN
-    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('X_Menu.TrainingEmployees', 1, N'Αίτηση για Εκπαίδευση',1)
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbUserMainGroup', 1, N'�����',2)
 END
 GO
-IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'X_Menu.TrainingEmployees' AND [Language] = 2) 
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbUserMainGroup' AND [Language] = 2) 
 BEGIN
-   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('X_Menu.TrainingEmployees', 2, N'Request for Training',1)
-END
-GO
-
-UPDATE X_StaticTranslations_FactoryDefaults set TranslatedText = 'Use applicant''s node' WHERE CD = 'lbUseEmployeeDepartmentForDeputyManager' AND [Language] = 2
-GO
-
-UPDATE X_StaticTranslations_FactoryDefaults set TranslatedText = 'Δεν μπορείτε να εκτυπώσετε πρόγραμμα εργασίας γιατί υπάρχουν μη οριστικοποιημένες ημέρες. Θέλετε να οριστικοποιηθούν με την υπάρχουσα ανάθεση;' WHERE CD = 'Hidden_lbFinalizedDaysExist' AND [Language] = 1
-GO
-UPDATE X_StaticTranslations_FactoryDefaults set TranslatedText = 'You can''t print the schedule because there are unfinalized days. Do you want to finalize them with the existing assignment?' WHERE CD = 'Hidden_lbFinalizedDaysExist' AND [Language] = 2
-GO
-
-
-------L_Object
-IF NOT EXISTS (select 1 from L_Object_FactoryDefaults where TABLE_NAME = 'SS_ApplicationTypes' AND ID_TABLE = 29 AND ID_LANGUAGES = 1 )
-BEGIN
-	INSERT INTO L_Object_FactoryDefaults  ([ID_TABLE], [ID_LANGUAGES], [DATA_TYPE], [VALUE], [TABLE_NAME]) VALUES (29,1,'TEXT', 'Αίτηση Οικογενειακής Κατάστασης', 'SS_ApplicationTypes')
-END
-GO
-IF NOT EXISTS (select 1 from L_Object_FactoryDefaults where TABLE_NAME = 'SS_ApplicationTypes' AND ID_TABLE = 29 AND ID_LANGUAGES = 2 )
-BEGIN
-	INSERT INTO L_Object_FactoryDefaults  ([ID_TABLE], [ID_LANGUAGES], [DATA_TYPE], [VALUE], [TABLE_NAME]) VALUES (29,2,'TEXT', 'Application for Family Status', 'SS_ApplicationTypes')
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbUserMainGroup', 2, N'Group',2)
 END
 GO
 
-IF NOT EXISTS (select 1 from L_Object_FactoryDefaults where TABLE_NAME = 'SS_ApplicationTypes' AND ID_TABLE = 30 AND ID_LANGUAGES = 1 )
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbMainGroup' AND [Language] = 1) 
 BEGIN
-	INSERT INTO L_Object_FactoryDefaults  ([ID_TABLE], [ID_LANGUAGES], [DATA_TYPE], [VALUE], [TABLE_NAME]) VALUES (30,1,'TEXT', 'Αίτηση για Εκπαίδευση', 'SS_ApplicationTypes')
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbMainGroup', 1, N'����� �����',2)
 END
 GO
-IF NOT EXISTS (select 1 from L_Object_FactoryDefaults where TABLE_NAME = 'SS_ApplicationTypes' AND ID_TABLE = 30 AND ID_LANGUAGES = 2 )
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbMainGroup' AND [Language] = 2) 
 BEGIN
-	INSERT INTO L_Object_FactoryDefaults  ([ID_TABLE], [ID_LANGUAGES], [DATA_TYPE], [VALUE], [TABLE_NAME]) VALUES (30,2,'TEXT', 'Request for Training', 'SS_ApplicationTypes')
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbMainGroup', 2, N'Main Group',2)
 END
 GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbexporttoexcelAll' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbexporttoexcelAll', 1, N'������� ����',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbexporttoexcelAll' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbexporttoexcelAll', 2, N'Export all',2)
+END
+GO
+
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbEmployeeVat' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbEmployeeVat', 1, N'��� �����������',2)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'lbEmployeeVat' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('lbEmployeeVat', 2, N'Employee VAT',2)
+END
+GO
+
+
+UPDATE X_StaticTranslations_FactoryDefaults set TranslatedText = '�������� ��������� (����������������)' WHERE CD = 'lbTrPrg_Modal_PassMinimum' AND [Language] = 1
+GO
+UPDATE X_StaticTranslations_FactoryDefaults set TranslatedText = 'Minimum for pass (Normalized)' WHERE CD = 'lbTrPrg_Modal_PassMinimum' AND [Language] = 2
+GO
+
+----Menu
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'X_Menu.AdvancePaymentApplications' AND [Language] = 1) 
+BEGIN
+    INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('X_Menu.AdvancePaymentApplications', 1, N'�������� ������������',1)
+END
+GO
+IF NOT EXISTS (select 1 from X_StaticTranslations_FactoryDefaults where [Cd] = 'X_Menu.AdvancePaymentApplications' AND [Language] = 2) 
+BEGIN
+   INSERT INTO X_StaticTranslations_FactoryDefaults ([Cd], [Language], [TranslatedText], [Category]) VALUES ('X_Menu.AdvancePaymentApplications', 2, N'Advance Payment Applications',1)
+END
+GO
+
+
 
 PRINT('------------ Summary ------------')
 GO

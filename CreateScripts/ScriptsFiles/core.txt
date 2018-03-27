@@ -10,16 +10,16 @@ SET TRANSACTION ISOLATION LEVEL SERIALIZABLE
 GO
 BEGIN TRANSACTION
 -- Pointer used for text / image updates. This might not be needed, but is declared here just in case
-INSERT INTO [dbo].[SS_ApplicationTypes] ([ID], [Descr], [ApprovalWorkFlowID], [EmailSubjectTemplateID], [EmailBodyTemplateID], [SenderEmailAccountID], [ApplicationCardUIViewID], [SendRegularApprovalEmail], [SendAutoApprovalEmail], [SendCompletionEmail], [LockTypeId], [LockDays], [ActivateApplicationTypes], [AppManualForwardToHR], [EmailEmpOnModByOther], [EmailEmpOnModByOtherSubjTemplateID], [EmailEmpOnModByOtherBodyTemplateID], [CompletionEmailSubjTemplateID], [CompletionEmailBodyTemplateID], [ApproveNotNeedSubjTemplateID], [ApproveNotNeedBodyTemplateID], [AutoApproveSubjTemplateID], [AutoApproveBodyTemplateID], [SendApproveNotNeededEmail], [Hidden], [SendEmailToApproverOnCompletion], [HasAttachments], [ApplicationMessageLabel], [MaxApprovedAppsAnnually], [BlockSync], [UseApplicationForCancel]) VALUES (30, N'Αίτηση για Εκπαίδευση Generic', 1, 1, 2, 1, 10022, 0, 0, 0, -1, NULL, 1, NULL, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, NULL, 0, NULL, NULL, 1, 0)
-INSERT INTO [dbo].[X_Request] ([ID], [UIControl], [Entity], [RequestStyle], [Params], [Edition], [Descr], [CardNameFieldCD]) VALUES (100377, N'ucSSApplication', N'SS_Applications', N'UnBound', N'atype=29', 1, N'lbFamilyStatusApplication', N'SS_Applications.ID')
-INSERT INTO [dbo].[X_Request] ([ID], [UIControl], [Entity], [RequestStyle], [Params], [Edition], [Descr], [CardNameFieldCD]) VALUES (100379, N'ucSSApplication', N'SS_Applications', N'UnBound', N'atype=30', 1, N'lbTrainingEmployees', N'SS_Applications.ID')
-INSERT INTO [dbo].[X_Request] ([ID], [UIControl], [Entity], [RequestStyle], [Params], [Edition], [Descr], [CardNameFieldCD]) VALUES (100380, N'ucOccurrences', NULL, N'UnBound', N'', 1, N'lbOccurrences', NULL)
-INSERT INTO [dbo].[X_TablesForDynamicTranslation] ([ID], [TABLE_NAME], [Descr], [ColumnName]) VALUES (78, N'L_MaritalStatus', N'Marital Status', NULL)
-INSERT INTO [dbo].[L_MaritalStatus] ([ID], [Descr], [OrderFld]) VALUES (5, N'Σύμφωνο Συμβίωσης', 6)
-INSERT INTO [dbo].[XU_UserScenarios] ([ID], [Descr]) VALUES (18, N'Submit Occurences')
-INSERT INTO [dbo].[X_UIControls] ([ID], [Cd], [Descr]) VALUES (156, N'ucOccurrences', N'Occurrences')
-INSERT INTO [dbo].[X_UIControl_Settings] ([ID], [ControlID], [varKey], [varValue]) VALUES (101, 24, N'FamilyStatusShowIncreasesTaxDeductible', N'1')
-INSERT INTO [dbo].[X_UIControl_Settings] ([ID], [ControlID], [varKey], [varValue]) VALUES (100, 24, N'FamilyStatusShowEmployeeDependent', N'1')
-UPDATE [dbo].[XP_Roles] SET [Cd]=N'rl_EmployeeInfoSubmitter', [Dscr]=N'Employee Info Submitter' WHERE [Id]=1012
+INSERT INTO [dbo].[X_Request] ([ID], [UIControl], [Entity], [RequestStyle], [Params], [Edition], [Descr], [CardNameFieldCD]) VALUES (100381, N'ucAdvancePaymentApplications', NULL, N'UnBound', N'', 1, N'lbAdvancePaymentApplications', NULL)
+INSERT INTO [dbo].[X_TablesForDynamicTranslation] ([ID], [TABLE_NAME], [Descr], [ColumnName]) VALUES (79, N'HR_QuestionChoices', N'Questionnaires  - Question Choices', NULL)
+INSERT INTO [dbo].[X_TablesForDynamicTranslation] ([ID], [TABLE_NAME], [Descr], [ColumnName]) VALUES (80, N'HR_QuestionnaireTypes', N'Questionnaire Types', NULL)
+INSERT INTO [dbo].[X_UIControls] ([ID], [Cd], [Descr]) VALUES (157, N'ucMassAdvancePaymentApplication', N'MassAdvancePaymentApplication')
+INSERT INTO [dbo].[X_UIControls] ([ID], [Cd], [Descr]) VALUES (158, N'ucImportReceipts', N'ImportReceipts')
+INSERT INTO [dbo].[X_UIControls] ([ID], [Cd], [Descr]) VALUES (159, N'ucAdvancePaymentApplications', N'Advance Payment Applications')
+INSERT INTO [dbo].[XS_SyncTask_ExcludedSSFields] ([ID], [SyncTaskID], [FieldName]) VALUES (190, 79, N'GroupID')
+INSERT INTO [dbo].[X_UIControl_Settings] ([ID], [ControlID], [varKey], [varValue]) VALUES (105, 154, N'ShowGroup', N'0')
+INSERT INTO [dbo].[X_UIControl_Settings] ([ID], [ControlID], [varKey], [varValue]) VALUES (106, 159, N'AdvancePaymentAppCommentsRequired', N'0')
+INSERT INTO [dbo].[XU_UserScenarios] ([ID], [Descr]) VALUES (19, N'Edit Training Seminar Attendees')
 COMMIT TRANSACTION
 GO
+

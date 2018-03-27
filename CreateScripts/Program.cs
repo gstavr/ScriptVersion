@@ -246,7 +246,7 @@ namespace CreateScripts
                             int indexofFirstCommaValue = s.IndexOf(',', indexOfFirstSemiCol);
                             string idValue = s.Substring(indexOfFirstSemiCol, (indexofFirstCommaValue - indexOfFirstSemiCol));
                             
-                            if (!tableName.Contains("X_UIControl_Settings"))
+                            if (!tableName.Contains("X_UIControl_Settings") && !tableName.Contains("X_Vars"))
                                 insertStatement.AppendLine($"IF NOT EXISTS (select 1 from {tableName} where [ID] = {idValue})");
                             else
                             {   
@@ -255,8 +255,13 @@ namespace CreateScripts
                                 string ControlID = s.Substring(indexofFirstCommaValue + 1, (controlKeyValue - indexofFirstCommaValue) - 1);
                                 //! Find VarKey Value
                                 int varControlIDIndex = s.IndexOf(',', controlKeyValue + 1);
-                                string varkey = s.Substring(controlKeyValue + 1, (varControlIDIndex - controlKeyValue) -1 );
-                                insertStatement.AppendLine($"IF NOT EXISTS (select 1 from {tableName} where [ControlID] ={ControlID} AND [varKey] = {varkey} )");
+                                if (tableName.Contains("X_UIControl_Settings"))
+                                {
+                                    string varkey = s.Substring(controlKeyValue + 1, (varControlIDIndex - controlKeyValue) - 1);
+                                    insertStatement.AppendLine($"IF NOT EXISTS (select 1 from {tableName} where [ControlID] ={ControlID} AND [varKey] = {varkey} )");
+                                }   
+                                else
+                                    insertStatement.AppendLine($"IF NOT EXISTS (select 1 from {tableName} where [varKey] = {ControlID} )");
                             }   
                             insertStatement.AppendLine("BEGIN");
                             insertStatement.AppendLine("\t"+s);
