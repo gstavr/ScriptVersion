@@ -105,7 +105,7 @@ namespace CreateScripts
             finalScript.Append(xAppFile);
 
             string wanted_path = Path.GetDirectoryName(Path.GetDirectoryName(Directory.GetCurrentDirectory()));
-            string exportFile = Directory.GetCurrentDirectory() + "\\ScriptsFiles\\version.sql";
+            string exportFile = Directory.GetCurrentDirectory() + $"\\ScriptsFiles\\{versionTag.Replace(".", "")}.sql";
             Console.WriteLine($"{exportFile} Created" );
             File.WriteAllText(exportFile, finalScript.ToString(), Encoding.UTF8);
         }
