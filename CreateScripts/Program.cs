@@ -239,7 +239,10 @@ namespace CreateScripts
                             int startIndex = s.IndexOf('.') + 1;
                             int endIndex = s.IndexOf(']' , startIndex);
                             string tableName = s.Substring(startIndex, (endIndex - startIndex) + 1);
-                            
+                            int startIndexOfColumnName = s.IndexOf('(');
+                            int endIndexOfColumnName = s.IndexOf(']',startIndexOfColumnName);
+                            string columnName = s.Substring(startIndexOfColumnName + 1, (endIndexOfColumnName - startIndexOfColumnName));
+
                             //! Find ID Value
                             int indexOfValueString = s.IndexOf("VALUES");
                             int indexOfFirstSemiCol = s.IndexOf('(', indexOfValueString) + 1;
@@ -247,7 +250,7 @@ namespace CreateScripts
                             string idValue = s.Substring(indexOfFirstSemiCol, (indexofFirstCommaValue - indexOfFirstSemiCol));
                             
                             if (!tableName.Contains("X_UIControl_Settings") && !tableName.Contains("X_Vars"))
-                                insertStatement.AppendLine($"IF NOT EXISTS (select 1 from {tableName} where [ID] = {idValue})");
+                                insertStatement.AppendLine($"IF NOT EXISTS (select 1 from {tableName} where {columnName} = {idValue})");
                             else
                             {   
                                 //! Find ControlID
