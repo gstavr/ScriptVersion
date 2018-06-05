@@ -272,6 +272,12 @@ namespace CreateScripts
                             insertStatement.AppendLine("GO");
                             s = insertStatement.ToString();
                         }
+                        if (s.Contains("UPDATE"))
+                        {
+                            insertStatement.AppendLine("GO");
+                            insertStatement.AppendLine(s.Trim());
+                            s = insertStatement.ToString();
+                        }
                         coreFile.AppendLine(s.Trim());
                     }
                 }
