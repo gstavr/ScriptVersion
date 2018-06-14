@@ -107,7 +107,7 @@ namespace CreateScripts
             string wanted_path = Path.GetDirectoryName(Path.GetDirectoryName(Directory.GetCurrentDirectory()));
             string exportFile = Directory.GetCurrentDirectory() + $"\\ScriptsFiles\\{versionTag.Replace(".", "")}.sql";
             Console.WriteLine($"{exportFile} Created" );
-            File.WriteAllText(exportFile, finalScript.ToString(), Encoding.UTF8);
+            File.WriteAllText(exportFile, finalScript.ToString(), new UTF8Encoding(false));
         }
 
 
@@ -343,7 +343,7 @@ namespace CreateScripts
         {
             string wanted_path = Path.GetDirectoryName(Path.GetDirectoryName(Directory.GetCurrentDirectory()));
             string exportFile = Directory.GetCurrentDirectory() + $"\\ScriptsFiles\\{fileName.ToString()}.sql";
-            File.WriteAllText(exportFile, file.ToString(), Encoding.UTF8);
+            File.WriteAllText(exportFile, file.ToString(), new UTF8Encoding(false));
             Console.WriteLine($"File {fileName}.spl has been created");
         }
 
