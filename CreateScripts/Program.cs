@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace CreateScripts
@@ -94,6 +95,10 @@ namespace CreateScripts
             
             Console.WriteLine("Provide Version Tag ex 18.1.3.0");
             string versionTag = Console.ReadLine();
+
+            var array = versionTag.Trim().Split('.');
+            string stringFileName = string.Join("", array);
+
             versionHeaded(versionTag);
             x_App(versionTag);
             
@@ -105,7 +110,7 @@ namespace CreateScripts
             finalScript.Append(xAppFile);
 
             string wanted_path = Path.GetDirectoryName(Path.GetDirectoryName(Directory.GetCurrentDirectory()));
-            string exportFile = Directory.GetCurrentDirectory() + $"\\ScriptsFiles\\{versionTag.Replace(".", "")}.sql";
+            string exportFile = Directory.GetCurrentDirectory() + $"\\ScriptsFiles\\{stringFileName}.sql";
             Console.WriteLine($"{exportFile} Created" );
             File.WriteAllText(exportFile, finalScript.ToString(), new UTF8Encoding(false));
         }
@@ -273,9 +278,9 @@ namespace CreateScripts
                             s = insertStatement.ToString();
                         }
                         if (s.Contains("UPDATE"))
-                        {
-                            insertStatement.AppendLine("GO");
+                        {   
                             insertStatement.AppendLine(s.Trim());
+                            insertStatement.AppendLine("GO");
                             s = insertStatement.ToString();
                         }
                         coreFile.AppendLine(s.Trim());
