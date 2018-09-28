@@ -129,7 +129,6 @@ namespace CreateScripts
         private static void x_App( string versionTag)
         {
             xAppFile = new StringBuilder();
-            xAppFile.AppendLine(@"PRINT 'Custom Script Completed'");
             xAppFile.AppendLine("---------------------------------------------X_App -----------------------------------------");
             xAppFile.AppendLine("GO");
             xAppFile.AppendLine($"UPDATE X_App SET VERSION = '{versionTag}'");
