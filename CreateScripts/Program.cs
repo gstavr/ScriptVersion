@@ -36,6 +36,48 @@ namespace CreateScripts
         /// </summary>
         private static void getWindowApplicationListSelection()
         {
+            Console.WriteLine("=============== Core Application Tasks ===============");
+            Console.WriteLine(" Press 1 for Versioning Taks ");
+            Console.WriteLine(" Press 2 for Script Tasks");
+            Console.WriteLine(" Press 3 for Database Tasks");
+            Console.WriteLine(" Press 0 key to exit Application");
+            ConsoleKeyInfo keyOption = Console.ReadKey();
+            Console.WriteLine();
+            int number;
+            bool result = Int32.TryParse(keyOption.KeyChar.ToString(), out number);
+            if (result && (number == 1 || number == 2))
+            {
+                switch (number)
+                {
+                    case 1:
+                        RunVersionScript();
+                        break;
+                    case 2:
+                        scriptTasks();
+                        break;
+                    case 3:
+                        break;
+                      
+                }
+            }
+            else if(result && number == 0)
+            {
+
+            }
+            else
+            {
+                Console.WriteLine(" Wrong input!!!!! ");
+                getWindowApplicationListSelection();
+            }
+                
+
+            
+        }
+
+        private static void scriptTasks()
+        {
+            Console.WriteLine("=============== Script Tasks ===============");
+            Console.WriteLine(" Press 0 to Go Back");
             Console.WriteLine(" Press 1 for Schema file name");
             Console.WriteLine(" Press 2 for Core file name");
             Console.WriteLine(" Press 3 for CustomScript file name");
@@ -52,6 +94,21 @@ namespace CreateScripts
                 Console.ReadKey();
         }
 
+        private static void RunVersionScript()
+        {
+            Console.WriteLine("=============== Run Version Script ===============");
+            Console.WriteLine(" ");
+            Console.WriteLine(" Press 0 to Go Back");
+        }
+
+        private static void RunDatabaseTasks()
+        {
+            Console.WriteLine("=============== Run Version Script ===============");
+            Console.WriteLine(" ");
+            Console.WriteLine(" Press 0 to Go Back");
+        }
+
+
         /// <summary>
         /// Switch Cases
         /// </summary>
@@ -60,6 +117,9 @@ namespace CreateScripts
         {
             switch (caseNumber)
             {
+                case (int)caseSelection.GoBack:
+                    getWindowApplicationListSelection();
+                    break;
                 case (int)caseSelection.InsertSchemaFile:
                     schemaFileFunction();
                     break;
@@ -87,6 +147,7 @@ namespace CreateScripts
             coreFileFunction(true);
             customFileFunction(true);
             createScripts();
+            getWindowApplicationListSelection();
         }
 
 
@@ -369,7 +430,8 @@ namespace CreateScripts
 
         enum caseSelection
         {
-            InsertSchemaFile = 1,
+            GoBack = 0,
+            InsertSchemaFile,
             InsertCoreFile,
             InsertCustomFile,
             InsertVersionTagName,
