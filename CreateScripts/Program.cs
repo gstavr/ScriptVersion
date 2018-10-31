@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -97,14 +100,30 @@ namespace CreateScripts
         private static void RunVersionScript()
         {
             Console.WriteLine("=============== Run Version Script ===============");
-            Console.WriteLine(" ");
+            Console.WriteLine(" Press 1 to Local DB Actions ");
+            Console.WriteLine(" Press 2 to essDB Actions ");
+            Console.WriteLine(" Press 3 to ess_r Actions");
             Console.WriteLine(" Press 0 to Go Back");
+            ConsoleKeyInfo keyOption = Console.ReadKey();
+            Console.WriteLine("");
+            int number;
+            bool result = Int32.TryParse(keyOption.KeyChar.ToString(), out number);
+            if (result)
+                swicthCaseVersionScript(number);
+            else
+            {
+                Console.WriteLine("Wrong input !!!!");
+                RunVersionScript();
+            }
+                
         }
 
         private static void RunDatabaseTasks()
         {
             Console.WriteLine("=============== Run Version Script ===============");
-            Console.WriteLine(" ");
+            Console.WriteLine(" Press 1 to Restore localDB ");
+            Console.WriteLine(" Press 2 to backUp Local DB ");
+            Console.WriteLine(" Press 3 run Version Script ");
             Console.WriteLine(" Press 0 to Go Back");
         }
 
@@ -141,6 +160,34 @@ namespace CreateScripts
             }
         }
 
+        private static void swicthCaseVersionScript(int caseNumber)
+        {
+            switch (caseNumber)
+            {
+                case (int)caseSelection.GoBack:
+                    getWindowApplicationListSelection();
+                    break;
+                case (int)caseSelection.InsertSchemaFile:
+                    schemaFileFunction();
+                    break;
+                case (int)caseSelection.InsertCoreFile:
+                    coreFileFunction();
+                    break;
+                case (int)caseSelection.InsertCustomFile:
+                    customFileFunction();
+                    break;
+                case (int)caseSelection.InsertVersionTagName:
+                    customFileFunction();
+                    break;
+                case (int)caseSelection.AutoateProcedure:
+                    automateProcedure();
+                    break;
+                default:
+                    RunVersionScript();
+                    break;
+            }
+        }
+
         private static void automateProcedure()
         {
             schemaFileFunction(true);
@@ -170,7 +217,6 @@ namespace CreateScripts
             finalScript.Append(customFile);
             finalScript.Append(xAppFile);
 
-            string wanted_path = Path.GetDirectoryName(Path.GetDirectoryName(Directory.GetCurrentDirectory()));
             string exportFile = Directory.GetCurrentDirectory() + $"\\ScriptsFiles\\{stringFileName}.sql";
             Console.WriteLine($"{exportFile} Created" );
             File.WriteAllText(exportFile, finalScript.ToString(), new UTF8Encoding(false));
@@ -421,12 +467,91 @@ namespace CreateScripts
             }
         }
 
+
+        // Show files in Script Files Directory and choose
+        private static void GetDirectoryFiles()
+        {
+            Directory.CreateDirectory("ScriptsFiles");
+            ShowFilesInDirectory(Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles"));
+        }
+
         //! Get File from Directory
         private static string getDirectoryPath(string fileName)
-        {
-            string wanted_path = Path.GetDirectoryName(Path.GetDirectoryName(Directory.GetCurrentDirectory()));
+        {  
             return Directory.GetCurrentDirectory() + "\\ScriptsFiles\\" + fileName;
         }
+
+        private static void ShowFilesInDirectory(string directoryPath)
+        {
+            int counter = 1;
+            // Process the list of files found in the directory.
+            string[] fileEntries = Directory.GetFiles(directoryPath);
+            foreach(string fileName in fileEntries)
+            {
+                ProcessFile(fileName, counter);
+                ++counter;
+            }
+        }
+
+        // Insert logic for processing found files here.
+        public static void ProcessFile(string path , int counter, string regEx = "")
+        {   
+            Console.WriteLine("{0} - File '{1}'", counter, Path.GetFileName(path));
+        }
+
+        // Check SqlConnection 
+
+        private bool isConnected(string server , string catalog , string userId , string password , bool isWindowsAuthentication )
+        {
+            string.Format("Data Source=GINOS\\SQLEXPRESS03;Initial Catalog=Odds;Integrated Security=True;MultipleActiveResultSets=true");
+            string connString = string.Format("Data Source={0}; Initial Catalog = ess_dev; User Id = sa; Password = epsilonsa;", server);
+
+            string windowsAuthenticationString = string.Format("Integrated Security=True;MultipleActiveResultSets=true");
+            string nowindowsAuthenticationString = string.Format("User Id = {0}; Password = {1};" , userId, password);
+
+
+            server = "DEV-STAVROU\\SQLEXPRESS";
+            catalog = "ess_bak";
+
+            connString = string.Format("Data Source={0}; Initial Catalog = {1}; {2}", server, catalog, isWindowsAuthentication ? windowsAuthenticationString : nowindowsAuthenticationString);
+
+
+
+            using (SqlConnection con = new SqlConnection("Data Source=dev2\\epsilon8; Initial Catalog = ess_dev; User Id = sa; Password = epsilonsa;"))
+            {
+                con.ConnectionString = "Data Source=dev2\\epsilon8; Initial Catalog = ess_dev; User Id = sa; Password = epsilonsa;";
+                con.Open();
+                SqlCommand cmd = new SqlCommand();
+                cmd.Connection = con;
+                string test = string.Format("'{0}'", string.Join(",", Cds.ToArray<string>()).Replace(",", "','"));
+                cmd.CommandText = $"SELECT cd FROM X_StaticTranslations_FactoryDefaults WHERE Cd in({test}) GROUP by cd";
+                SqlDataReader reader = cmd.ExecuteReader();
+                dt.Load(reader);
+                con.Close();
+            }
+            return true;
+        }
+
+        // DataBase Connections
+        private static DataTable CheckCdsToDataBase(List<string> Cds, string filePath)
+        {
+            DataTable dt = new DataTable();
+            using (SqlConnection con = new SqlConnection("Data Source=dev2\\epsilon8; Initial Catalog = ess_dev; User Id = sa; Password = epsilonsa;"))
+            {
+                con.ConnectionString = "Data Source=dev2\\epsilon8; Initial Catalog = ess_dev; User Id = sa; Password = epsilonsa;";
+                con.Open();
+                SqlCommand cmd = new SqlCommand();
+                cmd.Connection = con;
+                string test = string.Format("'{0}'", string.Join(",", Cds.ToArray<string>()).Replace(",", "','"));
+                cmd.CommandText = $"SELECT cd FROM X_StaticTranslations_FactoryDefaults WHERE Cd in({test}) GROUP by cd";
+                SqlDataReader reader = cmd.ExecuteReader();
+                dt.Load(reader);
+                con.Close();
+            }
+
+            return dt;
+        }
+
 
         enum caseSelection
         {
@@ -436,6 +561,14 @@ namespace CreateScripts
             InsertCustomFile,
             InsertVersionTagName,
             AutoateProcedure
+        }
+
+        enum versionScriptSelection
+        {
+            GoBack = 0,
+            LocalDB,
+            EssDB,
+            Ess_R
         }
 
         enum fileSelectionName
