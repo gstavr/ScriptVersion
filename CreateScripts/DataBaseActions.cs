@@ -60,18 +60,35 @@ namespace CreateScripts
             Console.WriteLine();
             int number;
             bool result = Int32.TryParse(keyOption.KeyChar.ToString(), out number);
-
-            if (result)
+            DataTable dt = GetDataBases(connectionString);
+            if (result && dt.Rows.Count > 0 && number <= dt.Rows.Count)
             {
+                string dbName = dt.Rows[number - 1]["DATABASE_NAME"].ToString();
 
+                string query = string.Format(@"BACKUP DATABASE [{0}] TO  DISK = N'{1}\newBk.bak' WITH NOFORMAT, INIT,  NAME = N'{0}-Full Database Backup', SKIP, NOREWIND, NOUNLOAD,  STATS = 10
+                                                GO
+                                                declare @backupSetId as int
+                                                select @backupSetId = position from msdb..backupset where database_name=N'{0}' and backup_set_id=(select max(backup_set_id) from msdb..backupset where database_name=N'{0}' )
+                                                if @backupSetId is null begin raiserror(N'Verify failed. Backup information for database ''{0}'' not found.', 16, 1) end
+                                                RESTORE VERIFYONLY FROM  DISK = N'{1}\newBk.bak' WITH  FILE = @backupSetId,  NOUNLOAD,  NOREWIND
+                                                GO", dbName , AppDomain.CurrentDomain.BaseDirectory);
 
-                string t = @"BACKUP DATABASE [ess_bk] TO  DISK = N'C:\newBk.bak' WITH NOFORMAT, INIT,  NAME = N'ess_bk-Full Database Backup', SKIP, NOREWIND, NOUNLOAD,  STATS = 10
-                GO
-                declare @backupSetId as int
-                select @backupSetId = position from msdb..backupset where database_name=N'ess_bk' and backup_set_id=(select max(backup_set_id) from msdb..backupset where database_name=N'ess_bk' )
-                if @backupSetId is null begin raiserror(N'Verify failed. Backup information for database ''ess_bk'' not found.', 16, 1) end
-                RESTORE VERIFYONLY FROM  DISK = N'C:\newBk.bak' WITH  FILE = @backupSetId,  NOUNLOAD,  NOREWIND
-                GO";
+                StringBuilder message = new StringBuilder();
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    con.Open();
+                    SqlCommand cmd = new SqlCommand();
+                    cmd.Connection = con;
+                    cmd.CommandText = query;
+                    SqlDataReader reader;
+                    reader = cmd.ExecuteReader();
+                    while (reader.Read())
+                    {   
+                        message.AppendLine(reader.ToString());
+                    }
+                    reader.Close();
+
+                }
             }
         }
 
