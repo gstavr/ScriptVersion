@@ -17,10 +17,11 @@ namespace CreateScripts
         static StringBuilder xAppFile = new StringBuilder();
         static StringBuilder versionTag = new StringBuilder();
         static StringBuilder versionHeaderScript = new StringBuilder();
+        private DataBaseActions dbActions;
         static void Main(string[] args)
         {
             Console.WriteLine("*************************************************");
-            Console.WriteLine("*          Script Creation v.1                  *");
+            Console.WriteLine("*             Script Creation v.1               *");
             Console.WriteLine("*                                               *");
             Console.WriteLine("*                                               *");
             Console.WriteLine("*                                               *");
@@ -37,7 +38,7 @@ namespace CreateScripts
         /// <summary>
         //! Window Application List Selection
         /// </summary>
-        private static void getWindowApplicationListSelection()
+        public static void getWindowApplicationListSelection()
         {
             Console.WriteLine("=============== Core Application Tasks ===============");
             Console.WriteLine(" Press 1 for Versioning Taks ");
@@ -48,7 +49,7 @@ namespace CreateScripts
             Console.WriteLine();
             int number;
             bool result = Int32.TryParse(keyOption.KeyChar.ToString(), out number);
-            if (result && (number == 1 || number == 2))
+            if (result && (number > 0 || number < 4))
             {
                 switch (number)
                 {
@@ -59,13 +60,14 @@ namespace CreateScripts
                         scriptTasks();
                         break;
                     case 3:
+                        new DataBaseActions();
                         break;
                       
                 }
             }
             else if(result && number == 0)
             {
-
+                Environment.Exit(-1);
             }
             else
             {
@@ -121,9 +123,9 @@ namespace CreateScripts
         private static void RunDatabaseTasks()
         {
             Console.WriteLine("=============== Run Version Script ===============");
-            Console.WriteLine(" Press 1 to Restore localDB ");
-            Console.WriteLine(" Press 2 to backUp Local DB ");
-            Console.WriteLine(" Press 3 run Version Script ");
+            Console.WriteLine(" Press 1 to Restore local Db ");
+            Console.WriteLine(" Press 2 to BackUp local Db ");
+            Console.WriteLine(" Press 3 run Version Script to local Db");
             Console.WriteLine(" Press 0 to Go Back");
         }
 
@@ -499,59 +501,7 @@ namespace CreateScripts
             Console.WriteLine("{0} - File '{1}'", counter, Path.GetFileName(path));
         }
 
-        // Check SqlConnection 
-
-        private bool isConnected(string server , string catalog , string userId , string password , bool isWindowsAuthentication )
-        {
-            string.Format("Data Source=GINOS\\SQLEXPRESS03;Initial Catalog=Odds;Integrated Security=True;MultipleActiveResultSets=true");
-            string connString = string.Format("Data Source={0}; Initial Catalog = ess_dev; User Id = sa; Password = epsilonsa;", server);
-
-            string windowsAuthenticationString = string.Format("Integrated Security=True;MultipleActiveResultSets=true");
-            string nowindowsAuthenticationString = string.Format("User Id = {0}; Password = {1};" , userId, password);
-
-
-            server = "DEV-STAVROU\\SQLEXPRESS";
-            catalog = "ess_bak";
-
-            connString = string.Format("Data Source={0}; Initial Catalog = {1}; {2}", server, catalog, isWindowsAuthentication ? windowsAuthenticationString : nowindowsAuthenticationString);
-
-
-
-            using (SqlConnection con = new SqlConnection("Data Source=dev2\\epsilon8; Initial Catalog = ess_dev; User Id = sa; Password = epsilonsa;"))
-            {
-                con.ConnectionString = "Data Source=dev2\\epsilon8; Initial Catalog = ess_dev; User Id = sa; Password = epsilonsa;";
-                con.Open();
-                SqlCommand cmd = new SqlCommand();
-                cmd.Connection = con;
-                string test = string.Format("'{0}'", string.Join(",", Cds.ToArray<string>()).Replace(",", "','"));
-                cmd.CommandText = $"SELECT cd FROM X_StaticTranslations_FactoryDefaults WHERE Cd in({test}) GROUP by cd";
-                SqlDataReader reader = cmd.ExecuteReader();
-                dt.Load(reader);
-                con.Close();
-            }
-            return true;
-        }
-
-        // DataBase Connections
-        private static DataTable CheckCdsToDataBase(List<string> Cds, string filePath)
-        {
-            DataTable dt = new DataTable();
-            using (SqlConnection con = new SqlConnection("Data Source=dev2\\epsilon8; Initial Catalog = ess_dev; User Id = sa; Password = epsilonsa;"))
-            {
-                con.ConnectionString = "Data Source=dev2\\epsilon8; Initial Catalog = ess_dev; User Id = sa; Password = epsilonsa;";
-                con.Open();
-                SqlCommand cmd = new SqlCommand();
-                cmd.Connection = con;
-                string test = string.Format("'{0}'", string.Join(",", Cds.ToArray<string>()).Replace(",", "','"));
-                cmd.CommandText = $"SELECT cd FROM X_StaticTranslations_FactoryDefaults WHERE Cd in({test}) GROUP by cd";
-                SqlDataReader reader = cmd.ExecuteReader();
-                dt.Load(reader);
-                con.Close();
-            }
-
-            return dt;
-        }
-
+      
 
         enum caseSelection
         {
