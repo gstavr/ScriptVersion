@@ -62,10 +62,10 @@ namespace CreateScripts
                     case 3:
                         new DataBaseActions();
                         break;
-                      
+
                 }
             }
-            else if(result && number == 0)
+            else if (result && number == 0)
             {
                 Environment.Exit(-1);
             }
@@ -74,20 +74,19 @@ namespace CreateScripts
                 Console.WriteLine(" Wrong input!!!!! ");
                 getWindowApplicationListSelection();
             }
-                
 
-            
+
+
         }
 
         private static void scriptTasks()
         {
             Console.WriteLine("=============== Script Tasks ===============");
             Console.WriteLine(" Press 0 to Go Back");
-            Console.WriteLine(" Press 1 for Schema file name");
-            Console.WriteLine(" Press 2 for Core file name");
-            Console.WriteLine(" Press 3 for CustomScript file name");
-            Console.WriteLine(" Press 4 for Version Tag name");
-            Console.WriteLine(" Press 5 to Automate Procedure");
+            Console.WriteLine(" Press 1 to choose Schema file");
+            Console.WriteLine(" Press 2 to choose Core file name");
+            Console.WriteLine(" Press 3 to choose CustomScript file name");
+            Console.WriteLine(" Press 4 to Automate Procedure");
             Console.WriteLine(" Press any other key to exit");
             ConsoleKeyInfo keyOption = Console.ReadKey();
             Console.WriteLine("");
@@ -111,13 +110,14 @@ namespace CreateScripts
             int number;
             bool result = Int32.TryParse(keyOption.KeyChar.ToString(), out number);
             if (result)
-                swicthCaseVersionScript(number);
+                Console.WriteLine("Under Construction");
+            //swicthCaseVersionScript(number);
             else
             {
                 Console.WriteLine("Wrong input !!!!");
                 RunVersionScript();
             }
-                
+
         }
 
         private static void RunDatabaseTasks()
@@ -150,9 +150,6 @@ namespace CreateScripts
                 case (int)caseSelection.InsertCustomFile:
                     customFileFunction();
                     break;
-                case (int)caseSelection.InsertVersionTagName:
-                    customFileFunction();
-                    break;
                 case (int)caseSelection.AutoateProcedure:
                     automateProcedure();
                     break;
@@ -162,33 +159,6 @@ namespace CreateScripts
             }
         }
 
-        private static void swicthCaseVersionScript(int caseNumber)
-        {
-            switch (caseNumber)
-            {
-                case (int)caseSelection.GoBack:
-                    getWindowApplicationListSelection();
-                    break;
-                case (int)caseSelection.InsertSchemaFile:
-                    schemaFileFunction();
-                    break;
-                case (int)caseSelection.InsertCoreFile:
-                    coreFileFunction();
-                    break;
-                case (int)caseSelection.InsertCustomFile:
-                    customFileFunction();
-                    break;
-                case (int)caseSelection.InsertVersionTagName:
-                    customFileFunction();
-                    break;
-                case (int)caseSelection.AutoateProcedure:
-                    automateProcedure();
-                    break;
-                default:
-                    RunVersionScript();
-                    break;
-            }
-        }
 
         private static void automateProcedure()
         {
@@ -202,7 +172,7 @@ namespace CreateScripts
 
         private static void createScripts()
         {
-            
+
             Console.WriteLine("Provide Version Tag ex 18.1.3.0");
             string versionTag = Console.ReadLine();
 
@@ -211,7 +181,7 @@ namespace CreateScripts
 
             versionHeaded(versionTag);
             x_App(versionTag);
-            
+
             StringBuilder finalScript = new StringBuilder();
             finalScript.Append(versionHeaderScript);
             finalScript.Append(schemaFile);
@@ -220,22 +190,22 @@ namespace CreateScripts
             finalScript.Append(xAppFile);
 
             string exportFile = Directory.GetCurrentDirectory() + $"\\ScriptsFiles\\{stringFileName}.sql";
-            Console.WriteLine($"{exportFile} Created" );
+            Console.WriteLine($"{exportFile} Created");
             File.WriteAllText(exportFile, finalScript.ToString(), new UTF8Encoding(false));
         }
 
 
         private static void versionHeaded(string versionTag)
-        {   
+        {
             versionHeaderScript = new StringBuilder();
             versionHeaderScript.AppendLine(@"/*");
             versionHeaderScript.AppendLine("You are recommended to back up your database before running this script");
             versionHeaderScript.AppendLine($"Version {versionTag} ");
-            versionHeaderScript.AppendLine(string.Format("Date {0}" , DateTime.Now.ToString("dd/MM/yyyy")));
+            versionHeaderScript.AppendLine(string.Format("Date {0}", DateTime.Now.ToString("dd/MM/yyyy")));
             versionHeaderScript.AppendLine(@"*/");
         }
 
-        private static void x_App( string versionTag)
+        private static void x_App(string versionTag)
         {
             xAppFile = new StringBuilder();
             xAppFile.AppendLine("---------------------------------------------X_App -----------------------------------------");
@@ -248,48 +218,57 @@ namespace CreateScripts
         /// </summary>
         private static void schemaFileFunction(bool automate = false)
         {
-            //! Default Path and file Name
-            string scriptsFile = getDirectoryPath("schema.txt");
-
-            if (!automate)
+            // Show Files in Directory
+            Console.WriteLine("===========================");
+            Console.WriteLine("Select Schema File");
+            GetDirectoryFiles();
+            ConsoleKeyInfo keyOption = Console.ReadKey();
+            Console.WriteLine("");
+            int number;
+            if (Int32.TryParse(keyOption.KeyChar.ToString(), out number) && 
+                Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles")).Count() > 0 && 
+                number > 0 && 
+                number <= Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles")).Count())
             {
-                Console.WriteLine("Provide Schema file name e.x schema.txt with UTF-8 Encoding , etc");
-                string schemaName = Console.ReadLine();
-                Console.WriteLine($"Searching for {schemaName} .......");
-                scriptsFile = getDirectoryPath(schemaName);
-            }
+                string filePath = GetFilePath(number);
+                Console.WriteLine($"Loading...");
+                getCommentLine();
 
-            getCommentLine();
-            
-            if (File.Exists(scriptsFile))
-            {
-                schemaFile = new StringBuilder();
-                schemaFile.AppendLine($"-------------------------- Schema Script -----------------------------");
-
-                using (StreamReader sr = File.OpenText(scriptsFile))
+                if (File.Exists(filePath))
                 {
-                    string s = "";
-                    while ((s = sr.ReadLine()) != null)
-                        schemaFile.AppendLine(s);
+                    schemaFile = new StringBuilder();
+                    schemaFile.AppendLine($"-------------------------- Schema Script -----------------------------");
+
+                    using (StreamReader sr = File.OpenText(filePath))
+                    {
+                        string s = "";
+                        while ((s = sr.ReadLine()) != null)
+                            schemaFile.AppendLine(s);
+                    }
+
+                    Console.WriteLine("Schema File Created");
                 }
-                
-                Console.WriteLine("Schema File Created");
+                else
+                {
+                    Console.WriteLine("Error! *** Schema file wasn't found!!!");
+                    getCommentLine(3);
+                    getWindowApplicationListSelection();
+                }
+
+                if (!automate)
+                    exportFileOption(schemaFile, fileSelectionName.schema);
+
             }
             else
             {
-                Console.WriteLine("Error! *** Schema file wasn't found!!!");
-                getCommentLine(3);
-                getWindowApplicationListSelection();
+                Console.WriteLine("Wrong Option");
+                scriptTasks();
             }
-
-            if (!automate)
-                exportFileOption(schemaFile , fileSelectionName.schema);
-
         }
 
 
 
-        private static void exportFileOption(StringBuilder file , fileSelectionName fileSelectionName)
+        private static void exportFileOption(StringBuilder file, fileSelectionName fileSelectionName)
         {
             Console.WriteLine("Press 1 to export the file separately and continue");
             Console.WriteLine("Press 2 to export the file separately and exit");
@@ -321,141 +300,157 @@ namespace CreateScripts
         /// </summary>
         private static void coreFileFunction(bool automate = false)
         {
-            string scriptsFile = getDirectoryPath("core.txt");
-            if (!automate)
+            Console.WriteLine("===========================");
+            Console.WriteLine("Select Core File");
+            // Show Files in Directory
+            GetDirectoryFiles();
+            ConsoleKeyInfo keyOption = Console.ReadKey();
+            Console.WriteLine("");
+            int number;
+            if (Int32.TryParse(keyOption.KeyChar.ToString(), out number) &&
+                Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles")).Count() > 0 &&
+                number > 0 &&
+                number <= Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles")).Count())
             {
-                Console.WriteLine("Provide Core file name e.x schema.txt , etc");
-                string coreName = Console.ReadLine();
-                Console.WriteLine($"Searching for {coreName} .......");
-                //! Find Solution Path 
-                scriptsFile = getDirectoryPath(coreName);
+                string filePath = GetFilePath(number);
+                Console.WriteLine("Loading ......");
+                getCommentLine();
+                // Find Scripts Directory
+                if (File.Exists(filePath))
+                {
+                    coreFile = new StringBuilder();
+                    coreFile.AppendLine($"-------------------------- Core Script -----------------------------");
+                    using (StreamReader sr = File.OpenText(filePath))
+                    {
+                        string s = "";
+                        while ((s = sr.ReadLine()) != null)
+                        {
+                            StringBuilder insertStatement = new StringBuilder();
+                            string ifNotExists = string.Empty;
+                            if (s.Contains("INSERT"))
+                            {
+                                //! Find Table Name
+                                int startIndex = s.IndexOf('.') + 1;
+                                int endIndex = s.IndexOf(']', startIndex);
+                                string tableName = s.Substring(startIndex, (endIndex - startIndex) + 1);
+                                int startIndexOfColumnName = s.IndexOf('(');
+                                int endIndexOfColumnName = s.IndexOf(']', startIndexOfColumnName);
+                                string columnName = s.Substring(startIndexOfColumnName + 1, (endIndexOfColumnName - startIndexOfColumnName));
+
+                                //! Find ID Value
+                                int indexOfValueString = s.IndexOf("VALUES");
+                                int indexOfFirstSemiCol = s.IndexOf('(', indexOfValueString) + 1;
+                                int indexofFirstCommaValue = s.IndexOf(',', indexOfFirstSemiCol);
+                                string idValue = s.Substring(indexOfFirstSemiCol, (indexofFirstCommaValue - indexOfFirstSemiCol));
+
+                                if (!tableName.Contains("X_UIControl_Settings") && !tableName.Contains("X_Vars"))
+                                    insertStatement.AppendLine($"IF NOT EXISTS (select 1 from {tableName} where {columnName} = {idValue})");
+                                else
+                                {
+                                    //! Find ControlID
+                                    int controlKeyValue = s.IndexOf(",", indexofFirstCommaValue + 1);
+                                    string ControlID = s.Substring(indexofFirstCommaValue + 1, (controlKeyValue - indexofFirstCommaValue) - 1);
+                                    //! Find VarKey Value
+                                    int varControlIDIndex = s.IndexOf(',', controlKeyValue + 1);
+                                    if (tableName.Contains("X_UIControl_Settings"))
+                                    {
+                                        string varkey = s.Substring(controlKeyValue + 1, (varControlIDIndex - controlKeyValue) - 1);
+                                        insertStatement.AppendLine($"IF NOT EXISTS (select 1 from {tableName} where [ControlID] ={ControlID} AND [varKey] = {varkey} )");
+                                    }
+                                    else
+                                        insertStatement.AppendLine($"IF NOT EXISTS (select 1 from {tableName} where [varKey] = {ControlID} )");
+                                }
+                                insertStatement.AppendLine("BEGIN");
+                                insertStatement.AppendLine("\t" + s);
+                                insertStatement.AppendLine("END");
+                                insertStatement.AppendLine("GO");
+                                s = insertStatement.ToString();
+                            }
+                            if (s.Contains("UPDATE"))
+                            {
+                                insertStatement.AppendLine(s.Trim());
+                                insertStatement.AppendLine("GO");
+                                s = insertStatement.ToString();
+                            }
+                            coreFile.AppendLine(s.Trim());
+                        }
+                    }
+                    coreFile.AppendLine($"PRINT 'Core Scripts Update'");
+                    Console.WriteLine("Core File Created");
+                }
+                else
+                {
+                    Console.WriteLine("Error! *** Core file wasn't found!!!");
+                    getCommentLine(1);
+                }
+
+                if (!automate)
+                    exportFileOption(coreFile, fileSelectionName.core);
+
             }
             
-            getCommentLine();
-            // Find Scripts Directory
-            if (File.Exists(scriptsFile))
-            {
-                coreFile = new StringBuilder();
-                coreFile.AppendLine($"-------------------------- Core Script -----------------------------");
-
-                using (StreamReader sr = File.OpenText(scriptsFile))
-                {
-                    string s = "";
-                    while ((s = sr.ReadLine()) != null)
-                    {
-                        StringBuilder insertStatement = new StringBuilder();
-
-                        string ifNotExists = string.Empty;
-                        if (s.Contains("INSERT"))
-                        {
-                            //! Find Table Name
-                            int startIndex = s.IndexOf('.') + 1;
-                            int endIndex = s.IndexOf(']' , startIndex);
-                            string tableName = s.Substring(startIndex, (endIndex - startIndex) + 1);
-                            int startIndexOfColumnName = s.IndexOf('(');
-                            int endIndexOfColumnName = s.IndexOf(']',startIndexOfColumnName);
-                            string columnName = s.Substring(startIndexOfColumnName + 1, (endIndexOfColumnName - startIndexOfColumnName));
-
-                            //! Find ID Value
-                            int indexOfValueString = s.IndexOf("VALUES");
-                            int indexOfFirstSemiCol = s.IndexOf('(', indexOfValueString) + 1;
-                            int indexofFirstCommaValue = s.IndexOf(',', indexOfFirstSemiCol);
-                            string idValue = s.Substring(indexOfFirstSemiCol, (indexofFirstCommaValue - indexOfFirstSemiCol));
-                            
-                            if (!tableName.Contains("X_UIControl_Settings") && !tableName.Contains("X_Vars"))
-                                insertStatement.AppendLine($"IF NOT EXISTS (select 1 from {tableName} where {columnName} = {idValue})");
-                            else
-                            {   
-                                //! Find ControlID
-                                int controlKeyValue = s.IndexOf(",", indexofFirstCommaValue + 1);
-                                string ControlID = s.Substring(indexofFirstCommaValue + 1, (controlKeyValue - indexofFirstCommaValue) - 1);
-                                //! Find VarKey Value
-                                int varControlIDIndex = s.IndexOf(',', controlKeyValue + 1);
-                                if (tableName.Contains("X_UIControl_Settings"))
-                                {
-                                    string varkey = s.Substring(controlKeyValue + 1, (varControlIDIndex - controlKeyValue) - 1);
-                                    insertStatement.AppendLine($"IF NOT EXISTS (select 1 from {tableName} where [ControlID] ={ControlID} AND [varKey] = {varkey} )");
-                                }   
-                                else
-                                    insertStatement.AppendLine($"IF NOT EXISTS (select 1 from {tableName} where [varKey] = {ControlID} )");
-                            }   
-                            insertStatement.AppendLine("BEGIN");
-                            insertStatement.AppendLine("\t"+s);
-                            insertStatement.AppendLine("END");
-                            insertStatement.AppendLine("GO");
-                            s = insertStatement.ToString();
-                        }
-                        if (s.Contains("UPDATE"))
-                        {   
-                            insertStatement.AppendLine(s.Trim());
-                            insertStatement.AppendLine("GO");
-                            s = insertStatement.ToString();
-                        }
-                        coreFile.AppendLine(s.Trim());
-                    }
-                }
-                coreFile.AppendLine($"PRINT 'Core Scripts Update'");
-                Console.WriteLine("Core File Created");
-            }
-            else
-            {
-                Console.WriteLine("Error! *** Core file wasn't found!!!");
-                getCommentLine(1);
-            }
-
-            if(!automate)
-                exportFileOption(coreFile , fileSelectionName.core);
         }
         /// <summary>
         //! Custom Scripts File
         /// </summary>
         private static void customFileFunction(bool automate = false)
         {
-            string scriptsFile = getDirectoryPath("custom.txt");
-
-            if (!automate)
+            Console.WriteLine("===========================");
+            Console.WriteLine("Select Custom File");
+            // Show Files in Directory
+            GetDirectoryFiles();
+            ConsoleKeyInfo keyOption = Console.ReadKey();
+            Console.WriteLine("");
+            int number;
+            if (Int32.TryParse(keyOption.KeyChar.ToString(), out number) &&
+                Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles")).Count() > 0 &&
+                number > 0 &&
+                number <= Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles")).Count())
             {
-                Console.WriteLine("Provide Custom file name e.x schema.txt , etc");
-                string customName = Console.ReadLine();
-                Console.WriteLine($"Searching for {customName} .......");
-                //! Find Solution Path 
-                scriptsFile = getDirectoryPath(customName);
-            }
-            getCommentLine();
-            // Find Scripts Directory
-            if (File.Exists(scriptsFile))
-            {   
-                customFile = new StringBuilder();
-                customFile.AppendLine($"-------------------------- Custom Script ---------------------------");
-
-                using (StreamReader sr = File.OpenText(scriptsFile))
+                string filePath = GetFilePath(number);
+                getCommentLine();
+                // Find Scripts Directory
+                if (File.Exists(filePath))
                 {
-                    string s = "";
-                    while ((s = sr.ReadLine()) != null)
+                    customFile = new StringBuilder();
+                    customFile.AppendLine($"-------------------------- Custom Script ---------------------------");
+
+                    using (StreamReader sr = File.OpenText(filePath))
                     {
-                        if (s.Contains("INSERT"))
-                            customFile.AppendLine("\t" + s.Trim());
-                        else
-                            customFile.AppendLine(s.Trim());
+                        string s = "";
+                        while ((s = sr.ReadLine()) != null)
+                        {
+                            if (s.Contains("INSERT"))
+                                customFile.AppendLine("\t" + s.Trim());
+                            else
+                                customFile.AppendLine(s.Trim());
+                        }
                     }
+                    Console.WriteLine("Custom File Created");
                 }
-                Console.WriteLine("Custom File Created");
+                else
+                {
+                    Console.WriteLine("Error! *** Custom file wasn't found!!!");
+                    getCommentLine(1);
+                }
+
+                if (!automate)
+                    exportFileOption(customFile, fileSelectionName.custom);
+
             }
             else
             {
-                Console.WriteLine("Error! *** Custom file wasn't found!!!");
-                getCommentLine(1);
+                getWindowApplicationListSelection();
             }
 
-            if (!automate)
-                exportFileOption(customFile , fileSelectionName.custom); 
-        }
-        
 
-        private static void exportFile(StringBuilder file , fileSelectionName fileName)
-        {
-            string wanted_path = Path.GetDirectoryName(Path.GetDirectoryName(Directory.GetCurrentDirectory()));
-            string exportFile = Directory.GetCurrentDirectory() + $"\\ScriptsFiles\\{fileName.ToString()}.sql";
+                
+        }
+
+
+        private static void exportFile(StringBuilder file, fileSelectionName fileName)
+        {   
+            string exportFile = Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles", string.Format("{0}.sql", fileName.ToString()));
             File.WriteAllText(exportFile, file.ToString(), new UTF8Encoding(false));
             Console.WriteLine($"File {fileName}.spl has been created");
         }
@@ -469,18 +464,28 @@ namespace CreateScripts
             }
         }
 
+        /// <summary>
+        /// Get File Path
+        /// </summary>
+        private static string GetFilePath(int index)
+        {   
+            string[] fileEntries = Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles"));
+            return fileEntries.Count() > 0 ? fileEntries[index - 1] : string.Empty;
+        }
+
 
         // Show files in Script Files Directory and choose
         private static void GetDirectoryFiles()
         {
+            // Create Folder ScriptsFiles if not exists
             Directory.CreateDirectory("ScriptsFiles");
             ShowFilesInDirectory(Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles"));
         }
 
         //! Get File from Directory
         private static string getDirectoryPath(string fileName)
-        {  
-            return Directory.GetCurrentDirectory() + "\\ScriptsFiles\\" + fileName;
+        {
+            return Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles", "{0}", fileName);
         }
 
         private static void ShowFilesInDirectory(string directoryPath)
@@ -488,7 +493,7 @@ namespace CreateScripts
             int counter = 1;
             // Process the list of files found in the directory.
             string[] fileEntries = Directory.GetFiles(directoryPath);
-            foreach(string fileName in fileEntries)
+            foreach (string fileName in fileEntries)
             {
                 ProcessFile(fileName, counter);
                 ++counter;
@@ -496,12 +501,12 @@ namespace CreateScripts
         }
 
         // Insert logic for processing found files here.
-        public static void ProcessFile(string path , int counter, string regEx = "")
-        {   
-            Console.WriteLine("{0} - File '{1}'", counter, Path.GetFileName(path));
+        public static void ProcessFile(string path, int counter, string regEx = "")
+        {
+            Console.WriteLine(" {0} - File '{1}'", counter, Path.GetFileName(path));
         }
 
-      
+
 
         enum caseSelection
         {
@@ -509,7 +514,6 @@ namespace CreateScripts
             InsertSchemaFile,
             InsertCoreFile,
             InsertCustomFile,
-            InsertVersionTagName,
             AutoateProcedure
         }
 
