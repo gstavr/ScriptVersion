@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.IO;
 using System.Text;
 
 namespace CreateScripts
@@ -37,6 +38,7 @@ namespace CreateScripts
                     case 2:
                         this.DataBases(connectionString);
                         this.BackUpDataBase();
+                        DatabaseActionsMessage();
                         break;
                     case 3:
                         //this.restoreDb();
@@ -54,7 +56,7 @@ namespace CreateScripts
 
 
         private void BackUpDataBase()
-        {
+        {   
             Console.WriteLine("Please pick a DataBase");
             ConsoleKeyInfo keyOption = Console.ReadKey();
             Console.WriteLine();
@@ -65,31 +67,30 @@ namespace CreateScripts
             {
                 string dbName = dt.Rows[number - 1]["DATABASE_NAME"].ToString();
 
-                string query = string.Format(@"BACKUP DATABASE [{0}] TO  DISK = N'{1}\newBk.bak' WITH NOFORMAT, INIT,  NAME = N'{0}-Full Database Backup', SKIP, NOREWIND, NOUNLOAD,  STATS = 10
-                                                GO
+                string query = string.Format(@"BACKUP DATABASE [{0}] TO  DISK = N'{1}.bak' WITH NOFORMAT, INIT,  NAME = N'{0}-Full Database Backup', SKIP, NOREWIND, NOUNLOAD,  STATS = 10
                                                 declare @backupSetId as int
                                                 select @backupSetId = position from msdb..backupset where database_name=N'{0}' and backup_set_id=(select max(backup_set_id) from msdb..backupset where database_name=N'{0}' )
                                                 if @backupSetId is null begin raiserror(N'Verify failed. Backup information for database ''{0}'' not found.', 16, 1) end
-                                                RESTORE VERIFYONLY FROM  DISK = N'{1}\newBk.bak' WITH  FILE = @backupSetId,  NOUNLOAD,  NOREWIND
-                                                GO", dbName , AppDomain.CurrentDomain.BaseDirectory);
+                                                RESTORE VERIFYONLY FROM  DISK = N'{1}.bak' WITH  FILE = @backupSetId,  NOUNLOAD,  NOREWIND", dbName , Path.Combine(ServerRootDirectory(connectionString), "Backup", dbName));
 
                 StringBuilder message = new StringBuilder();
                 using (SqlConnection con = new SqlConnection(connectionString))
                 {
+                    con.InfoMessage += new SqlInfoMessageEventHandler(MessageEventHandler);
                     con.Open();
                     SqlCommand cmd = new SqlCommand();
                     cmd.Connection = con;
                     cmd.CommandText = query;
-                    SqlDataReader reader;
-                    reader = cmd.ExecuteReader();
-                    while (reader.Read())
-                    {   
-                        message.AppendLine(reader.ToString());
-                    }
-                    reader.Close();
-
+                    int numberOfRows = cmd.ExecuteNonQuery();
                 }
             }
+        }
+
+        // Show Messages
+        public static void MessageEventHandler(object sender, SqlInfoMessageEventArgs e)
+        {
+            foreach (SqlError error in e.Errors)
+                Console.WriteLine(error);
         }
 
         #region DataBases Functions
@@ -220,6 +221,43 @@ namespace CreateScripts
             }
 
             return dt;
+        }
+
+        private string ServerRootDirectory(string connString)
+        {
+
+            string path = string.Empty;
+            using (SqlConnection con = new SqlConnection(connString))
+            {
+                con.Open();
+                SqlCommand cmd = new SqlCommand();
+                cmd.Connection = con;
+                cmd.CommandText = string.Format(@"DECLARE @InstanceName varchar(100), 
+                                                            @InstanceLocation varchar(100),
+                                                            @InstancePath varchar(100)
+      
+                                                    SELECT @InstanceName = convert(varchar, ServerProperty('InstanceName'))
+                                                    EXEC master..xp_regread @rootkey='HKEY_LOCAL_MACHINE',
+                                                        @key='Software\Microsoft\Microsoft SQL Server\Instance Names\SQL',
+                                                        @value_name=@InstanceName,
+                                                        @value=@InstanceLocation OUTPUT
+                                                    SELECT @InstanceLocation = 'Software\Microsoft\Microsoft SQL Server\'+@InstanceLocation+'\Setup'
+
+                                                    EXEC master..xp_regread @rootkey='HKEY_LOCAL_MACHINE',
+                                                        @key=@InstanceLocation,
+                                                        @value_name='SQLPath',
+                                                        @value=@InstancePath OUTPUT
+                                                    SELECT @InstancePath as RootDirectoryPath");
+                path = (string)cmd.ExecuteScalar();
+                con.Close();
+            }
+
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                Directory.Exists(Path.Combine(path, "Backup"));
+            }
+
+            return path;
         }
 
 

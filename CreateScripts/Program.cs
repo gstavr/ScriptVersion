@@ -172,26 +172,32 @@ namespace CreateScripts
 
         private static void createScripts()
         {
-
             Console.WriteLine("Provide Version Tag ex 18.1.3.0");
             string versionTag = Console.ReadLine();
-
             var array = versionTag.Trim().Split('.');
             string stringFileName = string.Join("", array);
 
-            versionHeaded(versionTag);
-            x_App(versionTag);
+            if (!string.IsNullOrWhiteSpace(stringFileName.Trim()))
+            {
+                versionHeaded(versionTag);
+                x_App(versionTag);
 
-            StringBuilder finalScript = new StringBuilder();
-            finalScript.Append(versionHeaderScript);
-            finalScript.Append(schemaFile);
-            finalScript.Append(coreFile);
-            finalScript.Append(customFile);
-            finalScript.Append(xAppFile);
+                StringBuilder finalScript = new StringBuilder();
+                finalScript.Append(versionHeaderScript);
+                finalScript.Append(schemaFile);
+                finalScript.Append(coreFile);
+                finalScript.Append(customFile);
+                finalScript.Append(xAppFile);
 
-            string exportFile = Directory.GetCurrentDirectory() + $"\\ScriptsFiles\\{stringFileName}.sql";
-            Console.WriteLine($"{exportFile} Created");
-            File.WriteAllText(exportFile, finalScript.ToString(), new UTF8Encoding(false));
+                string exportFile = Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles", string.Format("{0}.sql", stringFileName.ToString()));
+                Console.WriteLine($"{exportFile} Created");
+                File.WriteAllText(exportFile, finalScript.ToString(), new UTF8Encoding(false));
+            }
+            else
+            {
+                createScripts();
+            }
+            
         }
 
 
@@ -388,6 +394,11 @@ namespace CreateScripts
                     exportFileOption(coreFile, fileSelectionName.core);
 
             }
+            else
+            {
+                Console.WriteLine("Wrong Option");
+                scriptTasks();
+            }
             
         }
         /// <summary>
@@ -440,10 +451,9 @@ namespace CreateScripts
             }
             else
             {
-                getWindowApplicationListSelection();
+                Console.WriteLine("Wrong Option");
+                scriptTasks();
             }
-
-
                 
         }
 
