@@ -4,6 +4,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Text;
+using System.Xml;
 
 namespace CreateScripts
 {
@@ -12,6 +13,7 @@ namespace CreateScripts
         private string connectionString = string.Empty;
         public DataBaseActions()
         {
+            connectionStringFileCheck();
             this.DatabaseActionsMessage();
         }
 
@@ -56,7 +58,7 @@ namespace CreateScripts
 
 
         private void BackUpDataBase()
-        {   
+        {
             Console.WriteLine("Please pick a DataBase");
             ConsoleKeyInfo keyOption = Console.ReadKey();
             Console.WriteLine();
@@ -71,7 +73,7 @@ namespace CreateScripts
                                                 declare @backupSetId as int
                                                 select @backupSetId = position from msdb..backupset where database_name=N'{0}' and backup_set_id=(select max(backup_set_id) from msdb..backupset where database_name=N'{0}' )
                                                 if @backupSetId is null begin raiserror(N'Verify failed. Backup information for database ''{0}'' not found.', 16, 1) end
-                                                RESTORE VERIFYONLY FROM  DISK = N'{1}.bak' WITH  FILE = @backupSetId,  NOUNLOAD,  NOREWIND", dbName , Path.Combine(ServerRootDirectory(connectionString), "Backup", dbName));
+                                                RESTORE VERIFYONLY FROM  DISK = N'{1}.bak' WITH  FILE = @backupSetId,  NOUNLOAD,  NOREWIND", dbName, Path.Combine(ServerRootDirectory(connectionString), "Backup", dbName));
 
                 StringBuilder message = new StringBuilder();
                 using (SqlConnection con = new SqlConnection(connectionString))
@@ -125,11 +127,11 @@ namespace CreateScripts
 
         private void showDataBasesInServer(DataTable dataBases)
         {
-            if(dataBases.Rows.Count > 0)
+            if (dataBases.Rows.Count > 0)
             {
                 Console.WriteLine($"DataBases");
                 int count = 1;
-                foreach(DataRow row in dataBases.Rows)
+                foreach (DataRow row in dataBases.Rows)
                 {
                     Console.WriteLine($"{count++} : {row["DATABASE_NAME"]}");
                 }
@@ -145,48 +147,81 @@ namespace CreateScripts
         private string buildConnectionString()
         {
             DataTable dataBases = new DataTable();
-            Console.WriteLine("=============== DataBase Actions .2===============");
+            if (showConnectionStrings())
+            {
+                Console.WriteLine("=============== Load Connection String ===============");
+                Console.WriteLine(" Press -1 to create a new connection string");
+                Console.WriteLine(" Press 0 to go Back");
+                Console.WriteLine(" or choose a connection string");
+                string keyOption = Console.ReadLine();
+                Console.WriteLine();
+                int number;
+                bool result = Int32.TryParse(keyOption, out number);
+
+                if (result)
+                {
+                    switch (number)
+                    {
+                        case -1:
+                            buildConnectionStringFunction();
+                            break;
+                        case 0:
+                            DatabaseActionsMessage();
+                            break;
+                        default:
+                            getConnectionString(number);
+                            break;
+                    }
+                }
+                else
+                {
+                    buildConnectionString();
+                }
+
+            }
+            else
+            {
+                buildConnectionStringFunction();
+            }
+            
+
+
+            return connectionString;
+        }
+
+        private void buildConnectionStringFunction()
+        {
+            Console.WriteLine("=============== Build Connection String ===============");
             Console.WriteLine(" Build Connection String.......");
-            Console.WriteLine(" Provide 'Server name' (e.g  DEV2\\EPSILON8");
+            Console.WriteLine(" Provide 'Server name' (e.x  DEV2\\EPSILON8");
             Console.WriteLine(" or Press enter to go Back ");
             string server = checkConnectionStringParameters(Console.ReadLine());
             Console.WriteLine(" Press 1 if 'Sql Server Authentication' ");
             Console.WriteLine(" Press 2 if 'Window Authentication' ");
-            Console.WriteLine(" Press 3 if 'Default values :D' ");
             ConsoleKeyInfo keyOption = Console.ReadKey();
             Console.WriteLine();
             int number;
-            bool isWindowsAuthentication = true;    
+            bool isWindowsAuthentication = true;
             bool result = Int32.TryParse(keyOption.KeyChar.ToString(), out number);
             if (result)
             {
-                string catalog = string.Empty;
+                string catalog = "master";
+                Console.WriteLine(" Provide 'Initial Catalog' and press Enter (E.x Initial Catalog = Test;");
+                catalog = checkConnectionStringParameters(Console.ReadLine());
                 string userId = string.Empty;
                 string password = string.Empty;
-
-                switch (number)
+                if (number.Equals(1))
                 {
-                    case 1:
-                        isWindowsAuthentication = false;
-                        Console.WriteLine(" Provide User Id or Press enter to go Back");
-                        userId = checkConnectionStringParameters(Console.ReadLine());
-                        Console.WriteLine();
-                        Console.WriteLine(" Provide Password or Press enter to go Back");
-                        password = checkConnectionStringParameters(Console.ReadLine());
-                        break;
-                    case 2:
-                        break;
-                    case 3:
-                        server = "DEV-STAVROU\\SQLEXPRESS";
-                        //catalog = "ess_bak";
-                        break;
+                    isWindowsAuthentication = false;
+                    Console.WriteLine(" Provide User Id or Press enter to go Back");
+                    userId = checkConnectionStringParameters(Console.ReadLine());
+                    Console.WriteLine();
+                    Console.WriteLine(" Provide Password or Press enter to go Back");
+                    password = checkConnectionStringParameters(Console.ReadLine());
                 }
 
-                connectionString = createConnectionString(server, userId, password, isWindowsAuthentication);
+                connectionString = createConnectionString(server, catalog, userId, password, isWindowsAuthentication);
             }
-
-
-            return connectionString;
         }
 
         private string checkConnectionStringParameters(string parameters)
@@ -197,27 +232,36 @@ namespace CreateScripts
             return parameters;
         }
 
-        private string createConnectionString(string server, string userId, string password , bool isWindowsAuthentication)
-        {
-            string windowsAuthenticationString = string.Format("Integrated Security=True;MultipleActiveResultSets=true");
-            string nowindowsAuthenticationString = string.Format("User Id = {0}; Password = {1};", userId, password);
-            //  string.Format("Data Source={0}; Initial Catalog = {1}; {2}", server, catalog, isWindowsAuthentication ? windowsAuthenticationString : nowindowsAuthenticationString);
-            return string.Format("Data Source={0}; {1}", server,  isWindowsAuthentication ? windowsAuthenticationString : nowindowsAuthenticationString);
+        private string createConnectionString(string server, string catalog, string userId, string password, bool isWindowsAuthentication)
+        {   
+            string conString = string.Format("Data Source={0}; Initial Catalog={1}; {2}", server, catalog, isWindowsAuthentication ? string.Format("Integrated Security=True;MultipleActiveResultSets=true;") : string.Format("User Id = {0}; Password = {1};", userId, password));
+            addConStringToXmlFile(conString);
+            return conString;
         }
 
 
         private DataTable GetDataBases(string connString)
         {
             DataTable dt = new DataTable();
+            connString = string.Format($"{connString}Connection Timeout = 5");
             using (SqlConnection con = new SqlConnection(connString))
-            {   
-                con.Open();
-                SqlCommand cmd = new SqlCommand();
-                cmd.Connection = con;
-                cmd.CommandText = $"EXEC sys.sp_databases";
-                SqlDataReader reader = cmd.ExecuteReader();
-                dt.Load(reader);
-                con.Close();
+            {    
+                try
+                {
+                    Console.WriteLine("Please wait...");
+                    con.Open();
+                    SqlCommand cmd = new SqlCommand();
+                    cmd.Connection = con;
+                    cmd.CommandText = $"EXEC sys.sp_databases";
+                    SqlDataReader reader = cmd.ExecuteReader();
+                    dt.Load(reader);
+                    con.Close();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+                
             }
 
             return dt;
@@ -264,7 +308,7 @@ namespace CreateScripts
         // Extra
         private bool isConnected(string server, string catalog, string userId, string password, bool isWindowsAuthentication)
         {
-            string.Format("Data Source=GINOS\\SQLEXPRESS03;Initial Catalog=Odds;Integrated Security=True;MultipleActiveResultSets=true");
+            string.Format("Data Source=GINOS\\SQLEXPRESS03;Initial Catalog=Odds;Integrated Security=True;MultipleActiveResultSets=true;");
             string connString = string.Format("Data Source={0}; Initial Catalog = ess_dev; User Id = sa; Password = epsilonsa;", server);
 
             string windowsAuthenticationString = string.Format("Integrated Security=True;MultipleActiveResultSets=true");
@@ -299,7 +343,81 @@ namespace CreateScripts
             return dt;
         }
 
+        /// <summary>
+        /// Check if Connection String File exist else Create 
+        /// </summary>
+        private void connectionStringFileCheck()
+        {
+            string conFilePath = Path.Combine(Directory.GetCurrentDirectory(), string.Format("connectionString.xml"));
+            if (!File.Exists(conFilePath))
+            {
+                File.WriteAllText(conFilePath, string.Empty, new UTF8Encoding(false));
+                Console.WriteLine($"File {string.Format("connectionString.xml")}.spl has been created");
+            }
+        }
 
+        private bool showConnectionStrings()
+        {
+            bool hasConnectionStrings = false;
+            string conFilePath = Path.Combine(Directory.GetCurrentDirectory(), string.Format("connectionString.xml"));
+            XmlDocument doc = new XmlDocument();
+            doc.Load(conFilePath);
 
+            if (doc.DocumentElement.ChildNodes.Count > 0)
+            {
+                hasConnectionStrings = true;
+                int index = 1;
+                Console.WriteLine("=============== Existing Connection Strings ===============");
+                foreach (XmlNode node in doc.DocumentElement.ChildNodes)
+                {
+                    Console.WriteLine($"{index++}: {node.InnerText}");
+                }
+            }
+            return hasConnectionStrings;
+        }
+
+        private void getConnectionString(int index)
+        {
+            string conString = string.Empty;
+            string conFilePath = Path.Combine(Directory.GetCurrentDirectory(), string.Format("connectionString.xml"));
+            XmlDocument doc = new XmlDocument();
+            doc.Load(conFilePath);
+            
+            if (doc.DocumentElement.ChildNodes.Count > 0)
+                conString = doc.DocumentElement.ChildNodes[index - 1].InnerText;
+
+            connectionString = conString;
+        }
+
+        private void addConStringToXmlFile(string conString)
+        {
+            string conFilePath = Path.Combine(Directory.GetCurrentDirectory(), string.Format("connectionString.xml"));
+            XmlDocument doc = new XmlDocument();
+            doc.Load(conFilePath);
+
+            if (doc.DocumentElement.ChildNodes.Count > 0)
+            {
+                XmlElement root = doc.DocumentElement;
+
+                XmlElement conStringElement = doc.CreateElement("conString");
+                XmlElement varValue = doc.CreateElement("varValue");
+                conStringElement.AppendChild(varValue);
+                varValue.InnerText = conString;
+                root.AppendChild(conStringElement);
+                
+            }
+            else
+            {
+                XmlElement connectionStringsRoot = doc.CreateElement("connectionStrings");
+                XmlElement conStringElement = doc.CreateElement("conString");
+                XmlElement varValue = doc.CreateElement("varValue");
+                conStringElement.AppendChild(varValue);
+                varValue.InnerText = conString;
+                connectionStringsRoot.AppendChild(conStringElement);
+                doc.AppendChild(connectionStringsRoot);
+            }
+
+            doc.Save(conFilePath);
+        }
     }
 }
