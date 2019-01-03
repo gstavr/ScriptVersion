@@ -217,7 +217,7 @@ namespace CreateScripts
                                 }
                             }
 
-                            prString = s.Trim();
+                            prString = s.Trim().Length > 0 ? s.Trim(): prString;
                                 
                         }
                     }
