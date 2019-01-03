@@ -192,12 +192,48 @@ namespace CreateScripts
                 string exportFile = Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles", string.Format("{0}.sql", stringFileName.ToString()));
                 Console.WriteLine($"{exportFile} Created");
                 File.WriteAllText(exportFile, finalScript.ToString(), new UTF8Encoding(false));
+
+                // Find Scripts Directory
+                if (File.Exists(exportFile))
+                {
+                    StringBuilder checkScript = new StringBuilder();
+                    Console.WriteLine($"-------------------------- Check for Double Go ---------------------------");
+
+                    using (StreamReader sr = File.OpenText(exportFile))
+                    {
+                        string prString = string.Empty;
+                        string s = "";
+                        while ((s = sr.ReadLine()) != null)
+                        {
+                            if (!s.Trim().Equals("GO"))
+                            {
+                                checkScript.AppendLine(s);
+                            }
+                            else
+                            {
+                                if(s.Trim().Equals("GO") && !prString.Equals("GO"))
+                                {
+                                    checkScript.AppendLine(s);
+                                }
+                            }
+
+                            prString = s.Trim();
+                                
+                        }
+                    }
+
+                    exportFile = Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles", string.Format("{0}.sql", stringFileName.ToString()));
+                    Console.WriteLine($"{exportFile} Created");
+                    File.WriteAllText(exportFile, checkScript.ToString(), new UTF8Encoding(false));
+                    
+                }
+
             }
             else
             {
                 createScripts();
             }
-            
+
         }
 
 
@@ -231,9 +267,9 @@ namespace CreateScripts
             ConsoleKeyInfo keyOption = Console.ReadKey();
             Console.WriteLine("");
             int number;
-            if (Int32.TryParse(keyOption.KeyChar.ToString(), out number) && 
-                Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles")).Count() > 0 && 
-                number > 0 && 
+            if (Int32.TryParse(keyOption.KeyChar.ToString(), out number) &&
+                Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles")).Count() > 0 &&
+                number > 0 &&
                 number <= Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles")).Count())
             {
                 string filePath = GetFilePath(number);
@@ -399,7 +435,7 @@ namespace CreateScripts
                 Console.WriteLine("Wrong Option");
                 scriptTasks();
             }
-            
+
         }
         /// <summary>
         //! Custom Scripts File
@@ -454,12 +490,12 @@ namespace CreateScripts
                 Console.WriteLine("Wrong Option");
                 scriptTasks();
             }
-                
+
         }
 
 
         private static void exportFile(StringBuilder file, fileSelectionName fileName)
-        {   
+        {
             string exportFile = Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles", string.Format("{0}.sql", fileName.ToString()));
             File.WriteAllText(exportFile, file.ToString(), new UTF8Encoding(false));
             Console.WriteLine($"File {fileName}.spl has been created");
@@ -478,7 +514,7 @@ namespace CreateScripts
         /// Get File Path
         /// </summary>
         private static string GetFilePath(int index)
-        {   
+        {
             string[] fileEntries = Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles"));
             return fileEntries.Count() > 0 ? fileEntries[index - 1] : string.Empty;
         }
