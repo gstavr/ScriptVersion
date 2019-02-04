@@ -30,7 +30,7 @@ namespace CreateScripts
             int number;
             bool result = Int32.TryParse(keyOption.KeyChar.ToString(), out number);
 
-            if (result && (number > 0 || number < 4))
+            while (result && (number > 0 || number < 4))
             {
                 switch (number)
                 {
@@ -43,7 +43,7 @@ namespace CreateScripts
                         DatabaseActionsMessage();
                         break;
                     case 3:
-                        //this.restoreDb();
+                        this.RestoreDB();
                         break;
                     case 4:
                         buildConnectionString();
@@ -54,7 +54,24 @@ namespace CreateScripts
                         break;
                 }
             }
+
         }
+
+        /// <summary>
+        /// Restore DataBase
+        /// </summary>
+        /// 
+        private void RestoreDB()
+        {
+            this.buildConnectionString();
+            /*
+            USE [master]
+            RESTORE DATABASE [Odds] FROM  DISK = N'C:\Program Files\Microsoft SQL Server\MSSQL12.SQLEXPRESS\MSSQL\Backup\Odds.bak' WITH  FILE = 1,  NOUNLOAD,  STATS = 5
+            GO 
+             */
+            string backUpPath = Path.Combine(ServerRootDirectory(connectionString), "Backup");
+        }
+
 
 
         private void BackUpDataBase()
@@ -67,24 +84,35 @@ namespace CreateScripts
             DataTable dt = GetDataBases(connectionString);
             if (result && dt.Rows.Count > 0 && number <= dt.Rows.Count)
             {
-                string dbName = dt.Rows[number - 1]["DATABASE_NAME"].ToString();
 
-                string query = string.Format(@"BACKUP DATABASE [{0}] TO  DISK = N'{1}.bak' WITH NOFORMAT, INIT,  NAME = N'{0}-Full Database Backup', SKIP, NOREWIND, NOUNLOAD,  STATS = 10
+                try
+                {
+                    string dbName = dt.Rows[number - 1]["DATABASE_NAME"].ToString();
+                    string filePath = string.Format("{0}_{1}", Path.Combine(ServerRootDirectory(connectionString), "Backup", dbName), DateTime.Now.ToString("dd/MM/yyyy_HH:mm"));
+                    string query = string.Format(@"BACKUP DATABASE [{0}] TO  DISK = N'{1}.bak' WITH NOFORMAT, INIT,  NAME = N'{0}-Full Database Backup', SKIP, NOREWIND, NOUNLOAD,  STATS = 10
                                                 declare @backupSetId as int
                                                 select @backupSetId = position from msdb..backupset where database_name=N'{0}' and backup_set_id=(select max(backup_set_id) from msdb..backupset where database_name=N'{0}' )
                                                 if @backupSetId is null begin raiserror(N'Verify failed. Backup information for database ''{0}'' not found.', 16, 1) end
-                                                RESTORE VERIFYONLY FROM  DISK = N'{1}.bak' WITH  FILE = @backupSetId,  NOUNLOAD,  NOREWIND", dbName, Path.Combine(ServerRootDirectory(connectionString), "Backup", dbName));
+                                                RESTORE VERIFYONLY FROM  DISK = N'{1}.bak' WITH  FILE = @backupSetId,  NOUNLOAD,  NOREWIND", dbName, filePath);
 
-                StringBuilder message = new StringBuilder();
-                using (SqlConnection con = new SqlConnection(connectionString))
-                {
-                    con.InfoMessage += new SqlInfoMessageEventHandler(MessageEventHandler);
-                    con.Open();
-                    SqlCommand cmd = new SqlCommand();
-                    cmd.Connection = con;
-                    cmd.CommandText = query;
-                    int numberOfRows = cmd.ExecuteNonQuery();
+                    StringBuilder message = new StringBuilder();
+                    using (SqlConnection con = new SqlConnection(connectionString))
+                    {
+                        con.InfoMessage += new SqlInfoMessageEventHandler(MessageEventHandler);
+                        con.Open();
+                        SqlCommand cmd = new SqlCommand();
+                        cmd.Connection = con;
+                        cmd.CommandText = query;
+                        int numberOfRows = cmd.ExecuteNonQuery();
+                    }
+
+                    Console.WriteLine($"DataBase File Path: {filePath}");
                 }
+                catch(Exception ex)
+                {
+                    Console.WriteLine($"Error in BackUp");
+                }
+                
             }
         }
 
@@ -175,6 +203,7 @@ namespace CreateScripts
                 }
                 else
                 {
+                    Console.WriteLine("Wrong Input....");
                     buildConnectionString();
                 }
 
@@ -184,8 +213,6 @@ namespace CreateScripts
                 buildConnectionStringFunction();
             }
             
-
-
             return connectionString;
         }
 
@@ -206,7 +233,7 @@ namespace CreateScripts
             if (result)
             {
                 string catalog = "master";
-                Console.WriteLine(" Provide 'Initial Catalog' and press Enter (E.x Initial Catalog = Test;");
+                Console.WriteLine(" Provide 'Initial Catalog' and press Enter (E.x ess, ess_R");
                 catalog = checkConnectionStringParameters(Console.ReadLine());
                 string userId = string.Empty;
                 string password = string.Empty;
@@ -220,7 +247,7 @@ namespace CreateScripts
                     password = checkConnectionStringParameters(Console.ReadLine());
                 }
 
-                connectionString = createConnectionString(server, catalog, userId, password, isWindowsAuthentication);
+                this.connectionString = createConnectionString(server, catalog, userId, password, isWindowsAuthentication);
             }
         }
 
@@ -236,6 +263,10 @@ namespace CreateScripts
         {   
             string conString = string.Format("Data Source={0}; Initial Catalog={1}; {2}", server, catalog, isWindowsAuthentication ? string.Format("Integrated Security=True;MultipleActiveResultSets=true;") : string.Format("User Id = {0}; Password = {1};", userId, password));
             addConStringToXmlFile(conString);
+
+            Console.WriteLine($"Connection String: {conString} , created");
+            
+
             return conString;
         }
 
@@ -350,9 +381,9 @@ namespace CreateScripts
         {
             string conFilePath = Path.Combine(Directory.GetCurrentDirectory(), string.Format("connectionString.xml"));
             if (!File.Exists(conFilePath))
-            {
-                File.WriteAllText(conFilePath, string.Empty, new UTF8Encoding(false));
-                Console.WriteLine($"File {string.Format("connectionString.xml")}.spl has been created");
+            {   
+                File.WriteAllText(conFilePath, "<?xml version=\"1.0\" encoding=\"UTF - 8\"?>", new UTF8Encoding(false));
+                Console.WriteLine($"File {string.Format("connectionString.xml")}.spl has been created and initialized");
             }
         }
 
@@ -376,7 +407,7 @@ namespace CreateScripts
             return hasConnectionStrings;
         }
 
-        private void getConnectionString(int index)
+        private string getConnectionString(int index)
         {
             string conString = string.Empty;
             string conFilePath = Path.Combine(Directory.GetCurrentDirectory(), string.Format("connectionString.xml"));
@@ -385,8 +416,9 @@ namespace CreateScripts
             
             if (doc.DocumentElement.ChildNodes.Count > 0)
                 conString = doc.DocumentElement.ChildNodes[index - 1].InnerText;
+            this.connectionString = conString;
 
-            connectionString = conString;
+            return this.connectionString;
         }
 
         private void addConStringToXmlFile(string conString)
@@ -395,27 +427,13 @@ namespace CreateScripts
             XmlDocument doc = new XmlDocument();
             doc.Load(conFilePath);
 
-            if (doc.DocumentElement.ChildNodes.Count > 0)
-            {
-                XmlElement root = doc.DocumentElement;
+            XmlElement root = doc.DocumentElement;
 
-                XmlElement conStringElement = doc.CreateElement("conString");
-                XmlElement varValue = doc.CreateElement("varValue");
-                conStringElement.AppendChild(varValue);
-                varValue.InnerText = conString;
-                root.AppendChild(conStringElement);
-                
-            }
-            else
-            {
-                XmlElement connectionStringsRoot = doc.CreateElement("connectionStrings");
-                XmlElement conStringElement = doc.CreateElement("conString");
-                XmlElement varValue = doc.CreateElement("varValue");
-                conStringElement.AppendChild(varValue);
-                varValue.InnerText = conString;
-                connectionStringsRoot.AppendChild(conStringElement);
-                doc.AppendChild(connectionStringsRoot);
-            }
+            XmlElement conStringElement = doc.CreateElement("conString");
+            XmlElement varValue = doc.CreateElement("varValue");
+            conStringElement.AppendChild(varValue);
+            varValue.InnerText = conString;
+            root.AppendChild(conStringElement);
 
             doc.Save(conFilePath);
         }
