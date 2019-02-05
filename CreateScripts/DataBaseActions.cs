@@ -22,8 +22,9 @@ namespace CreateScripts
             Console.WriteLine("=============== DataBase Actions ===============");
             Console.WriteLine(" Press 1 to Go Back ");
             Console.WriteLine(" Press 2 to BackUp Database ");
-            Console.WriteLine(" Press 3 for Restore Database");
-            Console.WriteLine(" Press 4 Build Connection String");
+            Console.WriteLine(" Press 3 to Restore Database");
+            Console.WriteLine(" Press 4 to Drop Database");
+            Console.WriteLine(" Press 5 Build Connection String");
             Console.WriteLine(" Press 0 key to exit Application");
             ConsoleKeyInfo keyOption = Console.ReadKey();
             Console.WriteLine();
@@ -43,11 +44,19 @@ namespace CreateScripts
                         DatabaseActionsMessage();
                         break;
                     case 3:
+                        this.buildConnectionString();
                         this.RestoreDB();
+                        this.DatabaseActionsMessage();
                         break;
                     case 4:
-                        buildConnectionString();
-                        DatabaseActionsMessage();
+                        this.buildConnectionString();
+                        this.DataBases(this.connectionString);
+                        this.DeleteDB();
+                        this.DatabaseActionsMessage();
+                        break;
+                    case 5:
+                        this.buildConnectionString();
+                        this.DatabaseActionsMessage();
                         break;
                     case 0:
                         Environment.Exit(-1);
@@ -57,19 +66,87 @@ namespace CreateScripts
 
         }
 
+        private void DeleteDB()
+        {
+            Console.WriteLine("Please pick a DataBase");
+            ConsoleKeyInfo keyOption = Console.ReadKey();
+            Console.WriteLine();
+            int number;
+            bool result = Int32.TryParse(keyOption.KeyChar.ToString(), out number);
+            DataTable dt = GetDataBases(connectionString);
+            if (result && dt.Rows.Count > 0 && number <= dt.Rows.Count)
+            {
+                try
+                {
+                    string dbName = dt.Rows[number - 1]["DATABASE_NAME"].ToString();
+                    string query = string.Format(@"
+                                                EXEC msdb.dbo.sp_delete_database_backuphistory @database_name = N'{0}'
+                                                USE[master]
+                                                /****** Object:  Database [{0}]    Script Date:{1} ******/
+                                                DROP DATABASE[{0}]", dbName , DateTime.Now.ToString("dd/MM/yyyy hh:mm"));
+
+                    StringBuilder message = new StringBuilder();
+                    using (SqlConnection con = new SqlConnection(connectionString))
+                    {
+                        con.InfoMessage += new SqlInfoMessageEventHandler(MessageEventHandler);
+                        con.Open();
+                        SqlCommand cmd = new SqlCommand();
+                        cmd.Connection = con;
+                        cmd.CommandText = query;
+                        int numberOfRows = cmd.ExecuteNonQuery();
+                    }
+
+                    Console.WriteLine($"DataBase Deleted: {dbName}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error in Delete");
+                }
+            }
+        }
+
         /// <summary>
         /// Restore DataBase
         /// </summary>
         /// 
         private void RestoreDB()
         {
-            this.buildConnectionString();
-            /*
-            USE [master]
-            RESTORE DATABASE [Odds] FROM  DISK = N'C:\Program Files\Microsoft SQL Server\MSSQL12.SQLEXPRESS\MSSQL\Backup\Odds.bak' WITH  FILE = 1,  NOUNLOAD,  STATS = 5
-            GO 
-             */
-            string backUpPath = Path.Combine(ServerRootDirectory(connectionString), "Backup");
+            Console.WriteLine("***********************************");
+
+            int counter = 1;
+            foreach (string path in Directory.GetFiles(Path.Combine(ServerRootDirectory(connectionString), "Backup")))
+            {
+                Console.WriteLine(string.Format($"{counter++}: {Path.GetFileName(path)}"));
+            }
+            Console.WriteLine("Choose a database");
+            string dbRestoreIndex = Console.ReadLine();
+            int number = 0;
+            if (Int32.TryParse(dbRestoreIndex, out number) &&
+                Directory.GetFiles(Path.Combine(ServerRootDirectory(connectionString), "Backup")).Length > 0 &&
+                number > 0 &&
+                number <= Directory.GetFiles(Path.Combine(ServerRootDirectory(connectionString), "Backup")).Length)
+            {
+
+                string dbQuery = string.Format(@"
+                                                USE [master];
+                                                RESTORE DATABASE [Odds] FROM  DISK = N'{0}' WITH  FILE = 1,  NOUNLOAD,  STATS = 5;", Directory.GetFiles(Path.Combine(ServerRootDirectory(connectionString), "Backup"))[number - 1]);
+
+
+                StringBuilder message = new StringBuilder();
+                using (SqlConnection con = new SqlConnection(connectionString))
+                {
+                    con.InfoMessage += new SqlInfoMessageEventHandler(MessageEventHandler);
+                    con.Open();
+                    SqlCommand cmd = new SqlCommand();
+                    cmd.Connection = con;
+                    cmd.CommandText = dbQuery;
+                    int numberOfRows = cmd.ExecuteNonQuery();
+                }
+
+                Console.WriteLine($"DataBase Restore: {Path.GetFileName(Directory.GetFiles(Path.Combine(ServerRootDirectory(connectionString), "Backup"))[number - 1])}");
+                    
+            }
+
         }
 
 
@@ -108,11 +185,11 @@ namespace CreateScripts
 
                     Console.WriteLine($"DataBase File Path: {filePath}");
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     Console.WriteLine($"Error in BackUp");
                 }
-                
+
             }
         }
 
@@ -178,9 +255,9 @@ namespace CreateScripts
             if (showConnectionStrings())
             {
                 Console.WriteLine("=============== Load Connection String ===============");
+                Console.WriteLine(" Choose a connection string and press enter");
                 Console.WriteLine(" Press -1 to create a new connection string");
                 Console.WriteLine(" Press 0 to go Back");
-                Console.WriteLine(" or choose a connection string");
                 string keyOption = Console.ReadLine();
                 Console.WriteLine();
                 int number;
@@ -212,7 +289,7 @@ namespace CreateScripts
             {
                 buildConnectionStringFunction();
             }
-            
+
             return connectionString;
         }
 
@@ -260,12 +337,12 @@ namespace CreateScripts
         }
 
         private string createConnectionString(string server, string catalog, string userId, string password, bool isWindowsAuthentication)
-        {   
+        {
             string conString = string.Format("Data Source={0}; Initial Catalog={1}; {2}", server, catalog, isWindowsAuthentication ? string.Format("Integrated Security=True;MultipleActiveResultSets=true;") : string.Format("User Id = {0}; Password = {1};", userId, password));
             addConStringToXmlFile(conString);
 
             Console.WriteLine($"Connection String: {conString} , created");
-            
+
 
             return conString;
         }
@@ -276,7 +353,7 @@ namespace CreateScripts
             DataTable dt = new DataTable();
             connString = string.Format($"{connString}Connection Timeout = 5");
             using (SqlConnection con = new SqlConnection(connString))
-            {    
+            {
                 try
                 {
                     Console.WriteLine("Please wait...");
@@ -292,7 +369,7 @@ namespace CreateScripts
                 {
                     Console.WriteLine(ex.Message);
                 }
-                
+
             }
 
             return dt;
@@ -374,6 +451,9 @@ namespace CreateScripts
             return dt;
         }
 
+        public string returnConnectionString() => this.connectionString;
+       
+
         /// <summary>
         /// Check if Connection String File exist else Create 
         /// </summary>
@@ -381,7 +461,7 @@ namespace CreateScripts
         {
             string conFilePath = Path.Combine(Directory.GetCurrentDirectory(), string.Format("connectionString.xml"));
             if (!File.Exists(conFilePath))
-            {   
+            {
                 File.WriteAllText(conFilePath, "<?xml version=\"1.0\" encoding=\"UTF - 8\"?>", new UTF8Encoding(false));
                 Console.WriteLine($"File {string.Format("connectionString.xml")}.spl has been created and initialized");
             }
@@ -413,7 +493,7 @@ namespace CreateScripts
             string conFilePath = Path.Combine(Directory.GetCurrentDirectory(), string.Format("connectionString.xml"));
             XmlDocument doc = new XmlDocument();
             doc.Load(conFilePath);
-            
+
             if (doc.DocumentElement.ChildNodes.Count > 0)
                 conString = doc.DocumentElement.ChildNodes[index - 1].InnerText;
             this.connectionString = conString;

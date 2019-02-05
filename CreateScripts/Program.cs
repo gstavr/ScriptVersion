@@ -41,8 +41,8 @@ namespace CreateScripts
         public static void getWindowApplicationListSelection()
         {
             Console.WriteLine("=============== Core Application Tasks ===============");
-            Console.WriteLine(" Press 1 for Versioning Taks ");
-            Console.WriteLine(" Press 2 for Script Tasks");
+            Console.WriteLine(" Press 1 for Versioning Taks (Automate Version Tasks)");
+            Console.WriteLine(" Press 2 for Script Tasks (Schema, Core, Custom)");
             Console.WriteLine(" Press 3 for Database Tasks");
             Console.WriteLine(" Press 0 key to exit Application");
             ConsoleKeyInfo keyOption = Console.ReadKey();
@@ -54,7 +54,7 @@ namespace CreateScripts
                 switch (number)
                 {
                     case 1:
-                        RunVersionScript();
+                        new VersionTasks();
                         break;
                     case 2:
                         scriptTasks();
@@ -74,9 +74,6 @@ namespace CreateScripts
                 Console.WriteLine(" Wrong input!!!!! ");
                 getWindowApplicationListSelection();
             }
-
-
-
         }
 
         private static void scriptTasks()
@@ -86,7 +83,7 @@ namespace CreateScripts
             Console.WriteLine(" Press 1 to choose Schema file");
             Console.WriteLine(" Press 2 to choose Core file name");
             Console.WriteLine(" Press 3 to choose CustomScript file name");
-            Console.WriteLine(" Press 4 to Automate Procedure");
+            Console.WriteLine(" Press 4 to automate Procedure");
             Console.WriteLine(" Press any other key to exit");
             ConsoleKeyInfo keyOption = Console.ReadKey();
             Console.WriteLine("");
@@ -96,37 +93,6 @@ namespace CreateScripts
                 swicthCase(number);
             else
                 Console.ReadKey();
-        }
-
-        private static void RunVersionScript()
-        {
-            Console.WriteLine("=============== Run Version Script ===============");
-            Console.WriteLine(" Press 1 to Local DB Actions ");
-            Console.WriteLine(" Press 2 to essDB Actions ");
-            Console.WriteLine(" Press 3 to ess_r Actions");
-            Console.WriteLine(" Press 0 to Go Back");
-            ConsoleKeyInfo keyOption = Console.ReadKey();
-            Console.WriteLine("");
-            int number;
-            bool result = Int32.TryParse(keyOption.KeyChar.ToString(), out number);
-            if (result)
-                Console.WriteLine("Under Construction");
-            //swicthCaseVersionScript(number);
-            else
-            {
-                Console.WriteLine("Wrong input !!!!");
-                RunVersionScript();
-            }
-
-        }
-
-        private static void RunDatabaseTasks()
-        {
-            Console.WriteLine("=============== Run Version Script ===============");
-            Console.WriteLine(" Press 1 to Restore local Db ");
-            Console.WriteLine(" Press 2 to BackUp local Db ");
-            Console.WriteLine(" Press 3 run Version Script to local Db");
-            Console.WriteLine(" Press 0 to Go Back");
         }
 
 
@@ -225,15 +191,12 @@ namespace CreateScripts
                     exportFile = Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles", string.Format("{0}.sql", stringFileName.ToString()));
                     Console.WriteLine($"{exportFile} Created");
                     File.WriteAllText(exportFile, checkScript.ToString(), new UTF8Encoding(false));
-                    
                 }
-
             }
             else
             {
                 createScripts();
             }
-
         }
 
 
@@ -264,10 +227,10 @@ namespace CreateScripts
             Console.WriteLine("===========================");
             Console.WriteLine("Select Schema File");
             GetDirectoryFiles();
-            ConsoleKeyInfo keyOption = Console.ReadKey();
+            string keyOption = Console.ReadLine();
             Console.WriteLine("");
             int number;
-            if (Int32.TryParse(keyOption.KeyChar.ToString(), out number) &&
+            if (Int32.TryParse(keyOption, out number) &&
                 Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles")).Count() > 0 &&
                 number > 0 &&
                 number <= Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles")).Count())
@@ -346,10 +309,10 @@ namespace CreateScripts
             Console.WriteLine("Select Core File");
             // Show Files in Directory
             GetDirectoryFiles();
-            ConsoleKeyInfo keyOption = Console.ReadKey();
+            string keyOption = Console.ReadLine();
             Console.WriteLine("");
             int number;
-            if (Int32.TryParse(keyOption.KeyChar.ToString(), out number) &&
+            if (Int32.TryParse(keyOption, out number) &&
                 Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles")).Count() > 0 &&
                 number > 0 &&
                 number <= Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles")).Count())
@@ -446,10 +409,10 @@ namespace CreateScripts
             Console.WriteLine("Select Custom File");
             // Show Files in Directory
             GetDirectoryFiles();
-            ConsoleKeyInfo keyOption = Console.ReadKey();
+            string keyOption = Console.ReadLine();
             Console.WriteLine("");
             int number;
-            if (Int32.TryParse(keyOption.KeyChar.ToString(), out number) &&
+            if (Int32.TryParse(keyOption, out number) &&
                 Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles")).Count() > 0 &&
                 number > 0 &&
                 number <= Directory.GetFiles(Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles")).Count())
@@ -505,9 +468,8 @@ namespace CreateScripts
         private static void getCommentLine(int numberOfLines = 1)
         {
             for (int x = 0; x < numberOfLines; x++)
-            {
                 Console.WriteLine("*************************************************");
-            }
+
         }
 
         /// <summary>
@@ -529,11 +491,8 @@ namespace CreateScripts
         }
 
         //! Get File from Directory
-        private static string getDirectoryPath(string fileName)
-        {
-            return Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles", "{0}", fileName);
-        }
-
+        private static string getDirectoryPath(string fileName) => Path.Combine(Directory.GetCurrentDirectory(), "ScriptsFiles", "{0}", fileName);
+        
         private static void ShowFilesInDirectory(string directoryPath)
         {
             int counter = 1;
@@ -547,12 +506,8 @@ namespace CreateScripts
         }
 
         // Insert logic for processing found files here.
-        public static void ProcessFile(string path, int counter, string regEx = "")
-        {
-            Console.WriteLine(" {0} - File '{1}'", counter, Path.GetFileName(path));
-        }
-
-
+        public static void ProcessFile(string path, int counter, string regEx = "") => Console.WriteLine(" {0} - File '{1}'", counter, Path.GetFileName(path));
+        
 
         enum caseSelection
         {
